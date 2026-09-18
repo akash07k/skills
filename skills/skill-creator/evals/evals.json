@@ -1,0 +1,47 @@
+{
+  "skill_name": "skill-creator",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Our team has a release checklist for a Node monorepo: verify clean working tree, run unit and integration tests, build packages, check changelog entries, create a release tag, publish packages, and post the release link. Turn this into a portable Agent Skill under .agents/skills/repo-release/. It should trigger for release preparation, use pnpm, and report each check with its result.",
+      "expected_output": "A skill at .agents/skills/repo-release/SKILL.md with valid standard frontmatter, clear release workflow instructions, pnpm-specific commands, a structured result format, no unnecessary client-specific metadata, and a passing Agent Skills validation result.",
+      "files": [],
+      "assertions": [
+        "Creates .agents/skills/repo-release/SKILL.md with valid Agent Skills frontmatter and the name repo-release.",
+        "The description covers release preparation, and the workflow uses pnpm for both testing and building.",
+        "The workflow covers clean-tree verification, unit tests, integration tests, builds, changelog checks, tagging, publication, and sharing the release link in prerequisite order.",
+        "The skill defines a structured report with a result for each check and stops release actions when a required check fails.",
+        "The generated skill is client-neutral: it contains no unnecessary client-specific frontmatter or dependency on Copilot-only tools.",
+        "The executor actually runs a validator successfully against the generated skill instead of only claiming validation.",
+        "Does not create task-eval files for the generated release skill without the user's agreement to include and approve those tests."
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "I have a draft skill called pdf-forms, but its description is only 'Helps with PDFs.' Improve it so Agent Skills-compatible clients select it for filling, validating, and extracting fields from tax forms, but not for summarizing a PDF. Keep the skill name and the rest of the instructions unchanged, then validate the result.",
+      "expected_output": "Only the description is changed; it names relevant PDF form tasks and a useful boundary, stays within the specification limit, and the skill validates.",
+      "files": ["evals/files/pdf-forms/SKILL.md"],
+      "assertions": [
+        "Changes the pdf-forms description while preserving the name and every other frontmatter field and body instruction.",
+        "The new description explicitly covers filling, validating, and extracting fields from PDF tax forms.",
+        "The new description explicitly excludes PDF summarization so the near-miss boundary is visible before the body loads.",
+        "The edited skill passes strict Agent Skills validation and its description is at most 1024 characters.",
+        "The executor actually runs a validator successfully against pdf-forms instead of only claiming validation."
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "I want to know if my existing incident-summary skill is improving. Show me three realistic task prompts first, including one malformed-input case. After I approve them, compare the current skill with a no-skill baseline, grade observable outcomes, and build the review page. Don't open a browser without asking.",
+      "expected_output": "The first response presents three varied prompts, including malformed input, and requests approval. It pauses without saving unapproved eval definitions, launching the comparison, or opening a browser. The later, approval-dependent workflow is not scored in this first-turn eval.",
+      "files": ["evals/files/incident-summary/SKILL.md"],
+      "assertions": [
+        "Presents exactly three realistic incident-summary task prompts for the user to review.",
+        "At least one prompt contains an actual malformed input example and tests explicit error handling rather than invented incident facts.",
+        "The proposed prompts specify observable outcomes grounded in the incident-summary skill, such as impact, chronological timeline, recovery, or unknown facts.",
+        "Explicitly asks for approval of the prompts and pauses before launching paired evaluations, grading, or generating the review page.",
+        "Does not open a browser or claim the unapproved comparisons, grading, or human review have completed.",
+        "Does not save evals.json before the user approves the proposed task prompts."
+      ]
+    }
+  ]
+}
