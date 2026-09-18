@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Eval Set Review - __SKILL_NAME_PLACEHOLDER__</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Lora', Georgia, serif; background: #faf9f5; padding: 2rem; color: #141413; }
+    h1 { font-family: 'Poppins', sans-serif; margin-bottom: 0.5rem; font-size: 1.5rem; }
+    .description { color: #65645d; margin-bottom: 1.5rem; font-style: italic; max-width: 900px; }
+    .controls { margin-bottom: 1rem; display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .btn { font-family: 'Poppins', sans-serif; padding: 0.5rem 1rem; border: none; border-radius: 6px; cursor: pointer; font-size: 0.875rem; font-weight: 500; }
+    .btn-add { background: #326a9f; color: white; }
+    .btn-add:hover { background: #285680; }
+    .btn-export { background: #a54325; color: white; }
+    .btn-export:hover { background: #89371f; }
+    table { width: 100%; max-width: 1100px; border-collapse: collapse; background: white; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    caption { text-align: left; padding: 0.75rem 0; font-weight: bold; }
+    th { font-family: 'Poppins', sans-serif; background: #141413; color: #faf9f5; padding: 0.75rem 1rem; text-align: left; font-size: 0.875rem; }
+    td, th[scope="row"] { padding: 0.75rem 1rem; border-bottom: 1px solid #e8e6dc; vertical-align: top; }
+    th[scope="row"] { background: white; color: #141413; font-weight: normal; }
+    tr:nth-child(even) td, tr:nth-child(even) th[scope="row"] { background: #faf9f5; }
+    tr:hover td, tr:hover th[scope="row"] { background: #f3f1ea; }
+    .query-input { width: 100%; padding: 0.4rem; border: 1px solid #e8e6dc; border-radius: 4px; font-size: 0.875rem; font-family: 'Lora', Georgia, serif; resize: vertical; min-height: 60px; }
+    .toggle { display: inline-flex; align-items: center; gap: 0.5rem; cursor: pointer; min-height: 28px; }
+    .toggle input { width: 20px; height: 20px; accent-color: #a54325; }
+    .trigger-state { display: block; font-size: 0.8rem; margin-top: 0.4rem; }
+    .sort-button { display: block; margin-top: 0.4rem; padding: 0.4rem; border: 1px solid currentColor; border-radius: 4px; background: transparent; color: inherit; cursor: pointer; font: inherit; }
+    .btn-delete { background: #a12828; color: white; padding: 0.3rem 0.6rem; border: none; border-radius: 4px; cursor: pointer; font-size: 0.75rem; font-family: 'Poppins', sans-serif; }
+    .btn-delete:hover { background: #821f1f; }
+    .summary, .instructions { margin: 1rem 0; color: #65645d; font-size: 0.875rem; max-width: 1100px; line-height: 1.5; }
+    .status { margin-top: 0.5rem; min-height: 1.5em; }
+    .error { color: #a12828; font-weight: bold; margin: 0.75rem 0; }
+    :focus-visible { outline: 3px solid #205b91; outline-offset: 3px; }
+    .sort-button:focus-visible { outline-color: #faf9f5; }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+    .skip-link { position: absolute; left: 2rem; top: -10rem; padding: 0.75rem; background: white; color: #205b91; }
+    .skip-link:focus { top: 0.5rem; }
+    button:disabled { opacity: 0.6; cursor: not-allowed; }
+    @media (max-width: 600px) { body { padding: 1rem; } td, th, th[scope="row"] { padding: 0.5rem; } }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to evaluation editor</a>
+  <main id="main-content" tabindex="-1">
+  <h1>Eval Set Review: <span id="skill-name">__SKILL_NAME_PLACEHOLDER__</span></h1>
+  <p class="description">Current description: <span id="skill-desc">__SKILL_DESCRIPTION_PLACEHOLDER__</span></p>
+
+  <div class="controls">
+    <button type="button" id="add-query" class="btn btn-add" onclick="addRow()">Add Query</button>
+    <button type="button" id="export-evals" class="btn btn-export" onclick="exportEvalSet()">Export Eval Set</button>
+  </div>
+
+  <p class="instructions" id="editor-help">Edits stay on this page until you export. Changing a checkbox does not move its row; use the sort button to reorder queries. Export uses the displayed order. Query numbers stay the same after sorting or deleting.</p>
+  <p id="error" class="error" role="alert"></p>
+  <p id="status" class="status" role="status"></p>
+  <noscript><p class="error">JavaScript is required to edit or export this evaluation set.</p></noscript>
+  <table>
+    <caption>Evaluation queries</caption>
+    <thead>
+      <tr>
+        <th scope="col" style="width:10%">Query number</th>
+        <th scope="col" style="width:55%">Query text</th>
+        <th scope="col" id="trigger-heading" aria-sort="none" style="width:25%">Should Trigger
+          <button type="button" id="sort-trigger" class="sort-button" onclick="sortRows()">Sort: Yes first</button>
+        </th>
+        <th scope="col" style="width:10%">Actions</th>
+      </tr>
+    </thead>
+    <tbody id="eval-body"></tbody>
+  </table>
+
+  <p class="summary" id="summary"></p>
+  </main>
+
+  <script>
+    const EVAL_DATA = __EVAL_DATA_PLACEHOLDER__;
+
+    let nextId = 1;
+    let evalItems = [];
+    let sortDirection = 'none';
+
+    function announce(message) {
+      document.getElementById('status').textContent = message;
+    }
+
+    function clearError() {
+      document.getElementById('error').textContent = '';
+    }
+
+    function createRow(item) {
+      const tr = document.createElement('tr');
+      tr.id = `row-${item.id}`;
+      tr.innerHTML = `
+        <th scope="row">Query ${item.id}</th>
+        <td><textarea id="query-${item.id}" class="query-input" aria-label="Query ${item.id}"></textarea></td>
+        <td>
+          <label class="toggle" for="trigger-${item.id}">
+            <input id="trigger-${item.id}" type="checkbox">
+            <span>Should trigger<span class="sr-only"> query ${item.id}</span></span>
+          </label>
+          <span class="trigger-state" id="state-${item.id}"></span>
+        </td>
+        <td><button type="button" class="btn-delete">Delete<span class="sr-only"> query ${item.id}</span></button></td>
+      `;
+      const query = tr.querySelector('textarea');
+      query.value = item.query;
+      query.addEventListener('input', () => {
+        item.query = query.value;
+        clearError();
+      });
+      query.addEventListener('change', () => announce(`Query ${item.id} updated on this page. Export to save your edits.`));
+      const checkbox = tr.querySelector('input');
+      checkbox.checked = item.should_trigger;
+      checkbox.addEventListener('change', () => {
+        item.should_trigger = checkbox.checked;
+        updateTriggerState(item);
+        clearSort();
+        updateSummary();
+        clearError();
+        announce(`Query ${item.id} updated. Row order unchanged; use Sort to reorder.`);
+      });
+      tr.querySelector('button').addEventListener('click', () => deleteRow(item.id));
+      document.getElementById('eval-body').appendChild(tr);
+      updateTriggerState(item);
+      return tr;
+    }
+
+    function updateTriggerState(item) {
+      document.getElementById(`state-${item.id}`).textContent = item.should_trigger ? 'Yes: should trigger' : 'No: should not trigger';
+    }
+
+    function clearSort() {
+      sortDirection = 'none';
+      document.getElementById('trigger-heading').setAttribute('aria-sort', 'none');
+      document.getElementById('sort-trigger').textContent = 'Sort: Yes first';
+    }
+
+    function sortRows() {
+      sortDirection = sortDirection === 'none' ? 'descending' : sortDirection === 'descending' ? 'ascending' : 'none';
+      const focused = document.activeElement;
+      evalItems
+        .sort((a, b) => (
+          sortDirection === 'descending'
+            ? Number(b.should_trigger) - Number(a.should_trigger)
+            : sortDirection === 'ascending'
+              ? Number(a.should_trigger) - Number(b.should_trigger)
+              : a.id - b.id
+        ) || a.id - b.id)
+        .forEach(item => document.getElementById('eval-body').appendChild(document.getElementById(`row-${item.id}`)));
+      document.getElementById('trigger-heading').setAttribute('aria-sort', sortDirection);
+      document.getElementById('sort-trigger').textContent =
+        sortDirection === 'descending' ? 'Sort: No first' :
+        sortDirection === 'ascending' ? 'Sort: Authored order' :
+        'Sort: Yes first';
+      if (focused && focused.isConnected) focused.focus({ preventScroll: true });
+      announce(
+        sortDirection === 'descending' ? 'Sorted: should trigger queries first.' :
+        sortDirection === 'ascending' ? 'Sorted: should not trigger queries first.' :
+        'Restored authored query order.'
+      );
+    }
+
+    function deleteRow(id) {
+      const row = document.getElementById(`row-${id}`);
+      const neighbor = row.nextElementSibling || row.previousElementSibling;
+      evalItems = evalItems.filter(item => item.id !== id);
+      row.remove();
+      (neighbor ? neighbor.querySelector('textarea') : document.getElementById('add-query')).focus();
+      updateSummary();
+      clearError();
+      announce(`Query ${id} deleted. ${evalItems.length} queries remaining.`);
+    }
+
+    function addRow() {
+      const item = { id: nextId++, query: '', should_trigger: true };
+      evalItems.push(item);
+      const row = createRow(item);
+      clearSort();
+      updateSummary();
+      clearError();
+      row.querySelector('textarea').focus();
+      announce(`Query ${item.id} added at the end. Enter its query text.`);
+    }
+
+    function updateSummary() {
+      const trigger = evalItems.filter(i => i.should_trigger).length;
+      const noTrigger = evalItems.filter(i => !i.should_trigger).length;
+      document.getElementById('summary').textContent =
+        `${evalItems.length} queries total: ${trigger} should trigger, ${noTrigger} should not trigger`;
+    }
+
+    function exportEvalSet() {
+      clearError();
+      const valid = evalItems.filter(i => i.query.trim() !== '');
+      if (!valid.length) {
+        announce('');
+        document.getElementById('error').textContent = 'Nothing to export. Enter at least one non-blank query, then export again.';
+        (document.querySelector('.query-input') || document.getElementById('add-query')).focus();
+        return;
+      }
+      const data = valid.map(i => ({ query: i.query.trim(), should_trigger: i.should_trigger }));
+      let url;
+      let a;
+      try {
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        url = URL.createObjectURL(blob);
+        a = document.createElement('a');
+        a.href = url;
+        a.download = 'eval_set.json';
+        document.body.appendChild(a);
+        a.click();
+        const skipped = evalItems.length - valid.length;
+        announce(`Export requested for ${valid.length} queries${skipped ? `; ${skipped} blank queries skipped` : ''}. Check your browser downloads for eval_set.json.`);
+      } catch (error) {
+        announce('');
+        document.getElementById('error').textContent = `Export failed: ${error.message || error}. Your edits remain on this page; try exporting again.`;
+      } finally {
+        if (a) a.remove();
+        if (url) setTimeout(() => URL.revokeObjectURL(url), 1000);
+      }
+    }
+
+    try {
+      if (!Array.isArray(EVAL_DATA) || EVAL_DATA.some(item => !item || typeof item.query !== 'string' || typeof item.should_trigger !== 'boolean')) {
+        throw new Error('Expected an array of queries with string query and boolean should_trigger fields.');
+      }
+      evalItems = EVAL_DATA.map(item => ({ id: nextId++, query: item.query, should_trigger: item.should_trigger }));
+      evalItems.forEach(createRow);
+      updateSummary();
+    } catch (error) {
+      document.getElementById('error').textContent = `Cannot load evaluation queries: ${error.message || error} Fix the evaluation data and reopen this page.`;
+      document.querySelectorAll('.controls button, #sort-trigger').forEach(button => { button.disabled = true; });
+    }
+  </script>
+</body>
+</html>

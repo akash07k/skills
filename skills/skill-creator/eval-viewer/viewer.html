@@ -1,0 +1,1499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Eval Review</title>
+  <style>
+    :root {
+      --bg: #faf9f5;
+      --surface: #ffffff;
+      --border: #e8e6dc;
+      --text: #141413;
+      --text-muted: #6b6a63;
+      --accent: #89371f;
+      --accent-hover: #6f2d1b;
+      --green: #4d6135;
+      --green-bg: #eef2e8;
+      --red: #a12828;
+      --red-bg: #fceaea;
+      --header-bg: #141413;
+      --header-text: #faf9f5;
+      --radius: 6px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Lora', Georgia, serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ---- Header ---- */
+    .header {
+      background: var(--header-bg);
+      color: var(--header-text);
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
+    }
+    .header h1 {
+      font-family: 'Poppins', sans-serif;
+      font-size: 1.25rem;
+      font-weight: 600;
+    }
+    .header .instructions {
+      font-size: 0.8rem;
+      opacity: 0.7;
+      margin-top: 0.25rem;
+    }
+    .header .progress {
+      font-size: 0.875rem;
+      opacity: 0.8;
+      text-align: right;
+    }
+
+    /* ---- Main content ---- */
+    .main {
+      flex: 1;
+      padding: 1.5rem 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    /* ---- Sections ---- */
+    .section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      flex-shrink: 0;
+    }
+    .section-header {
+      font-family: 'Poppins', sans-serif;
+      padding: 0.75rem 1rem;
+      font-size: 0.75rem;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+      background: var(--bg);
+    }
+    .section-body {
+      padding: 1rem;
+    }
+
+    /* ---- Config badge ---- */
+    .config-badge {
+      display: inline-block;
+      padding: 0.2rem 0.625rem;
+      border-radius: 9999px;
+      font-family: 'Poppins', sans-serif;
+      font-size: 0.6875rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      margin-left: 0.75rem;
+      vertical-align: middle;
+    }
+    .config-badge.config-primary {
+      background: rgba(33, 150, 243, 0.12);
+      color: #175cd3;
+    }
+    .config-badge.config-baseline {
+      background: rgba(255, 193, 7, 0.15);
+      color: #805000;
+    }
+
+    /* ---- Prompt ---- */
+    .prompt-text {
+      white-space: pre-wrap;
+      font-size: 0.9375rem;
+      line-height: 1.6;
+    }
+
+    /* ---- Outputs ---- */
+    .output-file {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .output-file + .output-file {
+      margin-top: 1rem;
+    }
+    .output-file-header {
+      padding: 0.5rem 0.75rem;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      font-family: 'SF Mono', SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .output-file-header .dl-btn {
+      font-size: 0.7rem;
+      color: var(--accent);
+      text-decoration: none;
+      cursor: pointer;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-weight: 500;
+    }
+    .output-file-header .dl-btn:hover {
+      text-decoration: underline;
+    }
+    .output-file-content {
+      padding: 0.75rem;
+      overflow-x: auto;
+    }
+    .output-file-content pre {
+      font-size: 0.8125rem;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-family: 'SF Mono', SFMono-Regular, Consolas, 'Liberation Mono', Menlo, monospace;
+    }
+    .output-file-content img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 4px;
+    }
+    .output-file-content iframe {
+      width: 100%;
+      height: 600px;
+      border: none;
+    }
+    .output-file-content table {
+      border-collapse: collapse;
+      font-size: 0.8125rem;
+      width: 100%;
+    }
+    .output-file-content table td,
+    .output-file-content table th {
+      border: 1px solid var(--border);
+      padding: 0.375rem 0.5rem;
+      text-align: left;
+    }
+    .output-file-content table th {
+      background: var(--bg);
+      font-weight: 600;
+    }
+    .output-file-content .download-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 1rem;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--accent);
+      text-decoration: none;
+      font-size: 0.875rem;
+      cursor: pointer;
+    }
+    .output-file-content .download-link:hover {
+      background: var(--border);
+    }
+    .empty-state {
+      color: var(--text-muted);
+      font-style: italic;
+      padding: 2rem;
+      text-align: center;
+    }
+
+    /* ---- Feedback ---- */
+    .prev-feedback {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 0.625rem 0.75rem;
+      margin-top: 0.75rem;
+      font-size: 0.8125rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+    .prev-feedback-label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 0.25rem;
+      color: var(--text-muted);
+    }
+    .feedback-textarea {
+      width: 100%;
+      min-height: 100px;
+      padding: 0.75rem;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-family: inherit;
+      font-size: 0.9375rem;
+      line-height: 1.5;
+      resize: vertical;
+      color: var(--text);
+    }
+    :focus-visible { outline: 3px solid #175cd3; outline-offset: 3px; }
+    [hidden] { display: none !important; }
+    .skip-link { position: absolute; left: -10000px; }
+    .skip-link:focus { position: static; padding: 1rem; background: var(--surface); }
+    #review-main { flex: 1; }
+    #run-heading { margin: 1.5rem 2rem 0; font-size: 1.25rem; }
+    caption { text-align: left; padding: 0.5rem; font-weight: 600; }
+    .preview-note { margin: 0.5rem 0; }
+    .feedback-status {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 0.5rem;
+      min-height: 1.1em;
+    }
+
+    /* ---- Grades (collapsible) ---- */
+    .grades-toggle {
+      display: flex;
+      align-items: center;
+      cursor: pointer;
+      user-select: none;
+      border: none;
+      background: none;
+      color: inherit;
+      font: inherit;
+      text-align: left;
+    }
+    .grades-toggle:hover {
+      color: var(--accent);
+    }
+    .grades-content {
+      margin-top: 0.75rem;
+    }
+    .grades-summary {
+      font-size: 0.875rem;
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .grade-badge {
+      display: inline-block;
+      padding: 0.125rem 0.5rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .grade-pass { background: var(--green-bg); color: var(--green); }
+    .grade-fail { background: var(--red-bg); color: var(--red); }
+    .assertion-list {
+      list-style: none;
+    }
+    .assertion-item {
+      padding: 0.625rem 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.8125rem;
+    }
+    .assertion-item:last-child { border-bottom: none; }
+    .assertion-status {
+      font-weight: 600;
+      margin-right: 0.5rem;
+    }
+    .assertion-status.pass { color: var(--green); }
+    .assertion-status.fail { color: var(--red); }
+    .assertion-evidence {
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      margin-top: 0.25rem;
+      padding-left: 1.5rem;
+    }
+
+    /* ---- View tabs ---- */
+    .view-tabs {
+      display: flex;
+      gap: 0;
+      padding: 0 2rem;
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .view-tab {
+      font-family: 'Poppins', sans-serif;
+      padding: 0.625rem 1.25rem;
+      font-size: 0.8125rem;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      background: none;
+      color: var(--text-muted);
+      border-bottom: 2px solid transparent;
+      transition: all 0.15s;
+    }
+    .view-tab:hover { color: var(--text); }
+    .view-tab.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+    .view-panel { display: none; }
+    .view-panel.active { display: flex; flex-direction: column; flex: 1; }
+
+    /* ---- Benchmark view ---- */
+    .benchmark-view {
+      padding: 1.5rem 2rem;
+      flex: 1;
+    }
+    .benchmark-table {
+      border-collapse: collapse;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-size: 0.8125rem;
+      width: 100%;
+      margin-bottom: 1.5rem;
+    }
+    .benchmark-table th, .benchmark-table td {
+      padding: 0.625rem 0.75rem;
+      text-align: left;
+      border: 1px solid var(--border);
+    }
+    .benchmark-table th {
+      font-family: 'Poppins', sans-serif;
+      background: var(--header-bg);
+      color: var(--header-text);
+      font-weight: 500;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .benchmark-table tr:hover { background: var(--bg); }
+    .benchmark-table tr.benchmark-row-with { background: rgba(33, 150, 243, 0.06); }
+    .benchmark-table tr.benchmark-row-without { background: rgba(255, 193, 7, 0.06); }
+    .benchmark-table tr.benchmark-row-with:hover { background: rgba(33, 150, 243, 0.12); }
+    .benchmark-table tr.benchmark-row-without:hover { background: rgba(255, 193, 7, 0.12); }
+    .benchmark-table tr.benchmark-row-avg { font-weight: 600; border-top: 2px solid var(--border); }
+    .benchmark-table tr.benchmark-row-avg.benchmark-row-with { background: rgba(33, 150, 243, 0.12); }
+    .benchmark-table tr.benchmark-row-avg.benchmark-row-without { background: rgba(255, 193, 7, 0.12); }
+    .benchmark-delta-positive { color: var(--green); font-weight: 600; }
+    .benchmark-delta-negative { color: var(--red); font-weight: 600; }
+    .benchmark-notes {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem;
+    }
+    .benchmark-notes h3 {
+      font-family: 'Poppins', sans-serif;
+      font-size: 0.875rem;
+      margin-bottom: 0.75rem;
+    }
+    .benchmark-notes ul {
+      list-style: disc;
+      padding-left: 1.25rem;
+    }
+    .benchmark-notes li {
+      font-size: 0.8125rem;
+      line-height: 1.6;
+      margin-bottom: 0.375rem;
+    }
+    .benchmark-empty {
+      color: var(--text-muted);
+      font-style: italic;
+      text-align: center;
+      padding: 3rem;
+    }
+
+    /* ---- Navigation ---- */
+    .nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 2rem;
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+      flex-shrink: 0;
+    }
+    .nav-btn {
+      font-family: 'Poppins', sans-serif;
+      padding: 0.5rem 1.25rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      cursor: pointer;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--text);
+      transition: all 0.15s;
+    }
+    .nav-btn:hover:not(:disabled) {
+      background: var(--bg);
+      border-color: var(--text-muted);
+    }
+    .nav-btn:disabled {
+      color: var(--text-muted);
+      background: var(--bg);
+      cursor: not-allowed;
+    }
+    .done-btn {
+      font-family: 'Poppins', sans-serif;
+      padding: 0.5rem 1.5rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      color: var(--text);
+      cursor: pointer;
+      font-size: 0.875rem;
+      font-weight: 500;
+      transition: all 0.15s;
+    }
+    .done-btn:hover {
+      background: var(--bg);
+      border-color: var(--text-muted);
+    }
+    .done-btn.ready {
+      border: none;
+      background: var(--accent);
+      color: white;
+      font-weight: 600;
+    }
+    .done-btn.ready:hover {
+      background: var(--accent-hover);
+    }
+    /* ---- Done overlay ---- */
+    .done-overlay {
+      margin: auto;
+      border: none;
+      border-radius: 12px;
+      max-width: min(500px, 95vw);
+    }
+    .done-overlay::backdrop { background: rgba(0, 0, 0, 0.5); }
+    .done-card {
+      background: var(--surface);
+      border-radius: 12px;
+      padding: 2rem 3rem;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      max-width: 500px;
+    }
+    .done-card h2 {
+      font-size: 1.5rem;
+      margin-bottom: 0.5rem;
+    }
+    .done-card p {
+      color: var(--text-muted);
+      margin-bottom: 1.5rem;
+      line-height: 1.5;
+    }
+    .done-card .btn-row {
+      display: flex;
+      gap: 0.5rem;
+      justify-content: center;
+    }
+    .done-card button {
+      padding: 0.5rem 1.25rem;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      cursor: pointer;
+      font-size: 0.875rem;
+    }
+    .done-card button:hover {
+      background: var(--bg);
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#review-main">Skip to review</a>
+  <div id="app">
+    <header class="header">
+      <div>
+        <h1>Eval Review: <span id="skill-name"></span></h1>
+        <p class="instructions" id="review-instructions">Review each output and leave feedback below. Previous and Next move focus to the new run heading. Submit All Reviews when finished.</p>
+      </div>
+      <div class="progress" id="progress"></div>
+    </header>
+
+    <main id="review-main" tabindex="-1">
+    <noscript><p>JavaScript is required to review outputs and save feedback.</p></noscript>
+    <!-- View tabs (only shown when benchmark data exists) -->
+    <div class="view-tabs" id="view-tabs" role="tablist" aria-label="Review views" hidden>
+      <button class="view-tab active" id="tab-outputs" role="tab" aria-controls="panel-outputs" aria-selected="true" tabindex="0" onclick="switchView('outputs')">Outputs</button>
+      <button class="view-tab" id="tab-benchmark" role="tab" aria-controls="panel-benchmark" aria-selected="false" tabindex="-1" onclick="switchView('benchmark')">Benchmark</button>
+    </div>
+
+    <!-- Outputs panel (qualitative review) -->
+    <div class="view-panel active" id="panel-outputs" role="region" aria-label="Outputs">
+    <h2 id="run-heading" tabindex="-1">Loading evaluation runs</h2>
+    <div class="main">
+      <!-- Prompt -->
+      <div class="section">
+        <h3 class="section-header">Prompt <span class="config-badge" id="config-badge" style="display:none;"></span></h3>
+        <div class="section-body">
+          <div class="prompt-text" id="prompt-text"></div>
+        </div>
+      </div>
+
+      <!-- Outputs -->
+      <div class="section">
+        <h3 class="section-header">Output</h3>
+        <div class="section-body" id="outputs-body">
+          <div class="empty-state">No output files found</div>
+        </div>
+      </div>
+
+      <!-- Previous Output (collapsible) -->
+      <div class="section" id="prev-outputs-section" style="display:none;">
+        <h3 class="section-header">
+          <button class="grades-toggle" id="prev-outputs-toggle" aria-expanded="false" aria-controls="prev-outputs-content" onclick="toggleSection('prev-outputs')">
+            Previous Output
+          </button>
+        </h3>
+        <div class="grades-content" id="prev-outputs-content" hidden></div>
+      </div>
+
+      <!-- Grades (collapsible) -->
+      <div class="section" id="grades-section" style="display:none;">
+        <h3 class="section-header">
+          <button class="grades-toggle" id="grades-toggle" aria-expanded="false" aria-controls="grades-content" onclick="toggleSection('grades')">
+            Formal Grades
+          </button>
+        </h3>
+        <div class="grades-content" id="grades-content" hidden></div>
+      </div>
+
+      <!-- Feedback -->
+      <div class="section">
+        <h3 class="section-header"><label for="feedback">Your Feedback</label></h3>
+        <div class="section-body">
+          <p id="feedback-help"></p>
+          <textarea
+            class="feedback-textarea"
+            id="feedback"
+            aria-describedby="feedback-help"
+            placeholder="What do you think of this output? Any issues, suggestions, or things that look great?"
+          ></textarea>
+          <div class="feedback-status" id="feedback-status" role="status" aria-atomic="true"></div>
+          <div class="prev-feedback" id="prev-feedback" style="display:none;">
+            <div class="prev-feedback-label">Previous feedback</div>
+            <div id="prev-feedback-text"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <nav class="nav" id="outputs-nav" aria-label="Evaluation runs">
+      <button class="nav-btn" id="prev-btn" onclick="navigate(-1)">Previous</button>
+      <button class="done-btn" id="done-btn" onclick="showDoneDialog()">Submit All Reviews</button>
+      <button class="nav-btn" id="next-btn" onclick="navigate(1)">Next</button>
+    </nav>
+    </div><!-- end panel-outputs -->
+
+    <!-- Benchmark panel (quantitative stats) -->
+    <div class="view-panel" id="panel-benchmark" role="tabpanel" aria-labelledby="tab-benchmark" tabindex="0" hidden>
+      <div class="benchmark-view" id="benchmark-content">
+        <div class="benchmark-empty">No benchmark data available. Run a benchmark to see quantitative results here.</div>
+      </div>
+    </div>
+    <p id="review-error" role="alert" aria-atomic="true"></p>
+    <button id="download-feedback" onclick="downloadFeedback(false)" hidden>Download feedback backup</button>
+    </main>
+  </div>
+
+  <!-- Done overlay -->
+  <dialog class="done-overlay" id="done-overlay" aria-labelledby="done-title" aria-describedby="done-message">
+    <div class="done-card">
+      <h2 id="done-title">Review complete</h2>
+      <p id="done-message"></p>
+      <div class="btn-row">
+        <button autofocus onclick="closeDoneDialog()">Return to reviews</button>
+      </div>
+    </div>
+  </dialog>
+
+  <script>
+    // ---- Embedded data (injected by generate_review.py) ----
+    /*__EMBEDDED_DATA__*/
+
+    // ---- State ----
+    let feedbackMap = {};  // run_id -> feedback text
+    let currentIndex = 0;
+    let visitedRuns = new Set();
+    let saveTimeout;
+    let saveQueue = Promise.resolve();
+    let submitting = false;
+    let feedbackDirty = false;
+    let feedbackRevision = 0;
+    const serverMode = EMBEDDED_DATA.server_mode === true;
+
+    // ---- Init ----
+    async function init() {
+      document.getElementById("skill-name").textContent = EMBEDDED_DATA.skill_name;
+      document.title = "Eval Review: " + EMBEDDED_DATA.skill_name;
+      document.getElementById("feedback-help").textContent = serverMode
+        ? "Feedback saves automatically to this workspace. Submit All Reviews when finished."
+        : "Feedback stays in this page until you submit and download feedback.json. Download before closing or reloading.";
+      document.getElementById("feedback").disabled = true;
+      document.getElementById("done-btn").disabled = true;
+      document.getElementById("prev-btn").disabled = true;
+      document.getElementById("next-btn").disabled = true;
+      if (serverMode) {
+        try {
+          const resp = await fetch("/api/feedback", { signal: AbortSignal.timeout(10000) });
+          if (!resp.ok) throw new Error("HTTP " + resp.status);
+          const data = await resp.json();
+          if (data.reviews) {
+            for (const r of data.reviews) feedbackMap[r.run_id] = r.feedback;
+          }
+        } catch (err) {
+          document.getElementById("run-heading").textContent = "Unable to load saved feedback";
+          showError("Saved feedback could not be loaded: " + err.message + ". Reload before editing to avoid overwriting existing feedback.");
+          return false;
+        }
+      }
+
+      showRun(0);
+
+      const textarea = document.getElementById("feedback");
+      textarea.addEventListener("input", () => {
+        clearTimeout(saveTimeout);
+        captureFeedback();
+        feedbackDirty = true;
+        feedbackRevision += 1;
+        saveTimeout = setTimeout(() => saveCurrentFeedback(), 1000);
+      });
+      window.addEventListener("pagehide", flushFeedbackOnHide);
+      document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "hidden") flushFeedbackOnHide();
+      });
+      document.getElementById("done-overlay").addEventListener("close", () => {
+        document.getElementById("done-btn").focus();
+      });
+      return true;
+    }
+
+    // ---- Navigation ----
+    function navigate(delta) {
+      if (submitting) return;
+      const newIndex = currentIndex + delta;
+      if (newIndex >= 0 && newIndex < EMBEDDED_DATA.runs.length) {
+        saveCurrentFeedback();
+        showRun(newIndex);
+        document.getElementById("run-heading").focus();
+      }
+    }
+
+    function updateNavButtons() {
+      const empty = EMBEDDED_DATA.runs.length === 0;
+      document.getElementById("prev-btn").disabled = submitting || empty || currentIndex === 0;
+      document.getElementById("next-btn").disabled =
+        submitting || empty || currentIndex === EMBEDDED_DATA.runs.length - 1;
+      document.getElementById("done-btn").disabled = empty;
+      document.getElementById("feedback").disabled = submitting || empty;
+    }
+
+    // ---- Show a run ----
+    function showRun(index) {
+      currentIndex = index;
+      const run = EMBEDDED_DATA.runs[index];
+      if (!run) {
+        document.getElementById("run-heading").textContent = "No evaluation runs available";
+        document.getElementById("progress").textContent = "0 runs";
+        updateNavButtons();
+        return;
+      }
+      document.getElementById("run-heading").textContent =
+        `Run ${index + 1} of ${EMBEDDED_DATA.runs.length}: ${run.id.replace(/_/g, " ")}`;
+
+      // Progress
+      document.getElementById("progress").textContent =
+        `${index + 1} of ${EMBEDDED_DATA.runs.length}`;
+
+      // Prompt
+      document.getElementById("prompt-text").textContent = run.prompt;
+      showError("");
+
+      // Config badge
+      const badge = document.getElementById("config-badge");
+      const configMatch = run.id.match(/(with_skill|without_skill|new_skill|old_skill)/);
+      if (configMatch) {
+        const config = configMatch[1];
+        const isBaseline = config === "without_skill" || config === "old_skill";
+        badge.textContent = config.replace(/_/g, " ");
+        badge.className = "config-badge " + (isBaseline ? "config-baseline" : "config-primary");
+        badge.style.display = "inline-block";
+      } else {
+        badge.style.display = "none";
+      }
+
+      // Outputs
+      try {
+        renderFiles(document.getElementById("outputs-body"), run.outputs || []);
+      } catch (error) {
+        document.getElementById("outputs-body").textContent = "Output preview could not be rendered.";
+        showError("Output preview could not be rendered: " + (error.message || error));
+      }
+
+      // Previous outputs
+      try {
+        renderPrevOutputs(run);
+      } catch (error) {
+        document.getElementById("prev-outputs-section").style.display = "none";
+        showError("Previous output could not be rendered: " + (error.message || error));
+      }
+
+      // Grades
+      try {
+        renderGrades(run);
+      } catch (error) {
+        document.getElementById("grades-section").style.display = "none";
+        showError("Formal grades could not be rendered: " + (error.message || error));
+      }
+
+      // Previous feedback
+      const previous = (EMBEDDED_DATA.previous || {})[run.id] || {};
+      const prevFb = previous.feedback;
+      const prevEl = document.getElementById("prev-feedback");
+      if (prevFb) {
+        document.getElementById("prev-feedback-text").textContent = prevFb;
+        prevEl.style.display = "block";
+      } else {
+        prevEl.style.display = "none";
+      }
+
+      // Feedback
+      document.getElementById("feedback").value = feedbackMap[run.id] || "";
+      document.getElementById("feedback-status").textContent = "";
+
+      updateNavButtons();
+
+      // Track visited runs and promote done button when all visited
+      visitedRuns.add(index);
+      const doneBtn = document.getElementById("done-btn");
+      if (visitedRuns.size >= EMBEDDED_DATA.runs.length) {
+        doneBtn.classList.add("ready");
+      }
+
+    }
+
+    // ---- Render outputs ----
+    function renderFiles(container, outputs, previous = false) {
+      container.innerHTML = "";
+
+      if (outputs.length === 0) {
+        container.innerHTML = '<div class="empty-state">No output files</div>';
+        return;
+      }
+
+      for (const file of outputs) {
+        const fileDiv = document.createElement("div");
+        fileDiv.className = "output-file";
+
+        // Always show file header with download link
+        const header = document.createElement("div");
+        header.className = "output-file-header";
+        const nameSpan = document.createElement("h4");
+        nameSpan.textContent = file.name;
+        header.appendChild(nameSpan);
+        const dlBtn = document.createElement("a");
+        dlBtn.className = "dl-btn";
+        dlBtn.textContent = "Download " + (previous ? "previous " : "") + file.name;
+        dlBtn.download = file.name;
+        dlBtn.href = getDownloadUri(file);
+        if (file.type !== "error" && file.type !== "external") header.appendChild(dlBtn);
+        fileDiv.appendChild(header);
+
+        const content = document.createElement("div");
+        content.className = "output-file-content";
+
+        if (file.type === "text") {
+          const pre = document.createElement("pre");
+          pre.textContent = file.content;
+          content.appendChild(pre);
+        } else if (file.type === "image") {
+          const img = document.createElement("img");
+          img.src = file.data_uri;
+          img.alt = file.name;
+          content.appendChild(img);
+          const note = document.createElement("p");
+          note.className = "preview-note";
+          note.textContent = "Image output. The filename is not a description of its contents; request a text description when needed.";
+          content.appendChild(note);
+        } else if (file.type === "pdf") {
+          const details = document.createElement("details");
+          const summary = document.createElement("summary");
+          summary.textContent = (previous ? "Previous PDF preview: " : "PDF preview: ") + file.name;
+          details.appendChild(summary);
+          const note = document.createElement("p");
+          note.textContent = "The embedded PDF viewer and document determine keyboard and screen-reader support. You can download the file instead.";
+          details.appendChild(note);
+          details.addEventListener("toggle", () => {
+            if (details.open && !details.querySelector("iframe")) {
+              const iframe = document.createElement("iframe");
+              iframe.title = (previous ? "Previous PDF output: " : "PDF output: ") + file.name;
+              iframe.src = file.data_uri;
+              details.appendChild(iframe);
+            }
+          });
+          content.appendChild(details);
+        } else if (file.type === "xlsx") {
+          renderXlsx(content, file.data_b64, (previous ? "Previous " : "") + file.name);
+        } else if (file.type === "binary") {
+          const a = document.createElement("a");
+          a.className = "download-link";
+          a.href = file.data_uri;
+          a.download = file.name;
+          a.textContent = "Download " + file.name;
+          content.appendChild(a);
+        } else if (file.type === "external") {
+          const note = document.createElement("p");
+          const size = typeof file.size_bytes === "number"
+            ? " (" + (file.size_bytes / (1024 * 1024)).toFixed(1) + " MiB)"
+            : "";
+          note.textContent = "This file is too large to embed" + size + ". Open it from this path:";
+          content.appendChild(note);
+          const path = document.createElement("code");
+          path.textContent = file.path || "Path unavailable";
+          content.appendChild(path);
+        } else if (file.type === "error") {
+          const pre = document.createElement("pre");
+          pre.textContent = file.content;
+          pre.style.color = "var(--red)";
+          content.appendChild(pre);
+        }
+
+        fileDiv.appendChild(content);
+        container.appendChild(fileDiv);
+      }
+    }
+
+    // ---- XLSX rendering via SheetJS ----
+    let sheetJsPromise;
+
+    function loadSheetJs() {
+      if (window.XLSX) return Promise.resolve(window.XLSX);
+      if (!sheetJsPromise) {
+        sheetJsPromise = new Promise((resolve, reject) => {
+          const script = document.createElement("script");
+          script.src = "https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js";
+          script.integrity = "sha384-EnyY0/GSHQGSxSgMwaIPzSESbqoOLSexfnSMN2AP+39Ckmn92stwABZynq1JyzdT";
+          script.crossOrigin = "anonymous";
+          script.onload = () => window.XLSX
+            ? resolve(window.XLSX)
+            : reject(new Error("SheetJS loaded without exposing XLSX"));
+          script.onerror = () => reject(new Error("SheetJS could not be loaded"));
+          document.head.appendChild(script);
+        });
+      }
+      return sheetJsPromise;
+    }
+
+    async function renderXlsx(container, b64Data, fileName) {
+      try {
+        const xlsx = await loadSheetJs();
+        const raw = Uint8Array.from(atob(b64Data), c => c.charCodeAt(0));
+        const wb = xlsx.read(raw, { type: "array" });
+
+        for (let i = 0; i < wb.SheetNames.length; i++) {
+          const sheetName = wb.SheetNames[i];
+          const ws = wb.Sheets[sheetName];
+
+          const wrapper = document.createElement("div");
+          wrapper.tabIndex = 0;
+          wrapper.setAttribute("role", "region");
+          wrapper.setAttribute("aria-label", fileName + ", sheet " + sheetName);
+          wrapper.style.overflowX = "auto";
+          const table = document.createElement("table");
+          const caption = table.createCaption();
+          caption.textContent = fileName + ", sheet " + sheetName + ". Row and column headers are spreadsheet coordinates.";
+          if (!ws["!ref"]) {
+            caption.textContent += " Empty sheet.";
+          } else {
+            const range = xlsx.utils.decode_range(ws["!ref"]);
+            const header = table.createTHead().insertRow();
+            const corner = document.createElement("th");
+            corner.scope = "col";
+            corner.textContent = "Row";
+            header.appendChild(corner);
+            for (let col = range.s.c; col <= range.e.c; col++) {
+              const th = document.createElement("th");
+              th.scope = "col";
+              th.textContent = xlsx.utils.encode_col(col);
+              header.appendChild(th);
+            }
+            const tbody = table.createTBody();
+            for (let row = range.s.r; row <= range.e.r; row++) {
+              const tr = tbody.insertRow();
+              const th = document.createElement("th");
+              th.scope = "row";
+              th.textContent = String(row + 1);
+              tr.appendChild(th);
+              for (let col = range.s.c; col <= range.e.c; col++) {
+                const cell = ws[xlsx.utils.encode_cell({ r: row, c: col })];
+                tr.insertCell().textContent = cell ? xlsx.utils.format_cell(cell) : "";
+              }
+            }
+          }
+          wrapper.appendChild(table);
+          container.appendChild(wrapper);
+        }
+      } catch (err) {
+        container.textContent = "Error rendering spreadsheet: " + err.message;
+      }
+    }
+
+    // ---- Grades ----
+    function renderGrades(run) {
+      const section = document.getElementById("grades-section");
+      const content = document.getElementById("grades-content");
+
+      if (!run.grading) {
+        section.style.display = "none";
+        return;
+      }
+
+      const grading = run.grading;
+      section.style.display = "block";
+      // Reset to collapsed
+      content.hidden = true;
+      document.getElementById("grades-toggle").setAttribute("aria-expanded", "false");
+
+      const summary = grading.summary && typeof grading.summary === "object"
+        ? grading.summary
+        : {};
+      const rawExpectations = Array.isArray(grading.expectations) ? grading.expectations : [];
+      const expectations = rawExpectations.filter(exp =>
+        exp && typeof exp === "object" &&
+        typeof exp.text === "string" &&
+        typeof exp.passed === "boolean"
+      );
+
+      const wrapper = document.createElement("div");
+      wrapper.style.padding = "1rem";
+      const summaryLine = document.createElement("div");
+      summaryLine.className = "grades-summary";
+      const badge = document.createElement("span");
+      const numericPassRate = typeof summary.pass_rate === "number" && Number.isFinite(summary.pass_rate)
+        ? summary.pass_rate
+        : null;
+      badge.className = "grade-badge " + (
+        numericPassRate == null ? "" :
+        numericPassRate >= 0.8 ? "grade-pass" :
+        numericPassRate < 0.5 ? "grade-fail" : ""
+      );
+      badge.textContent = numericPassRate == null ? "?" : Math.round(numericPassRate * 100) + "%";
+      summaryLine.appendChild(badge);
+      const counts = document.createElement("span");
+      const displayCount = value =>
+        typeof value === "number" && Number.isFinite(value) ? String(value) : "?";
+      counts.textContent =
+        `${displayCount(summary.passed)} passed, ${displayCount(summary.failed)} failed of ${displayCount(summary.total)}`;
+      summaryLine.appendChild(counts);
+      wrapper.appendChild(summaryLine);
+
+      const list = document.createElement("ul");
+      list.className = "assertion-list";
+      for (const exp of expectations) {
+        const item = document.createElement("li");
+        item.className = "assertion-item";
+        const status = document.createElement("span");
+        status.className = "assertion-status " + (exp.passed ? "pass" : "fail");
+        status.textContent = exp.passed ? "Pass: " : "Fail: ";
+        item.appendChild(status);
+        const text = document.createElement("span");
+        text.textContent = exp.text;
+        item.appendChild(text);
+        if (typeof exp.evidence === "string" && exp.evidence) {
+          const evidence = document.createElement("div");
+          evidence.className = "assertion-evidence";
+          evidence.textContent = exp.evidence;
+          item.appendChild(evidence);
+        }
+        list.appendChild(item);
+      }
+      wrapper.appendChild(list);
+      if (expectations.length !== rawExpectations.length) {
+        const warning = document.createElement("p");
+        warning.textContent = `${rawExpectations.length - expectations.length} malformed grade entries were omitted.`;
+        wrapper.appendChild(warning);
+      }
+      content.replaceChildren(wrapper);
+    }
+
+    function toggleSection(id) {
+      const content = document.getElementById(id + "-content");
+      content.hidden = !content.hidden;
+      document.getElementById(id + "-toggle").setAttribute("aria-expanded", String(!content.hidden));
+    }
+
+    // ---- Previous outputs (collapsible) ----
+    function renderPrevOutputs(run) {
+      const section = document.getElementById("prev-outputs-section");
+      const content = document.getElementById("prev-outputs-content");
+      const prevOutputs = ((EMBEDDED_DATA.previous || {})[run.id] || {}).outputs;
+
+      if (!prevOutputs || prevOutputs.length === 0) {
+        section.style.display = "none";
+        return;
+      }
+
+      section.style.display = "block";
+      content.hidden = true;
+      document.getElementById("prev-outputs-toggle").setAttribute("aria-expanded", "false");
+      renderFiles(content, prevOutputs, true);
+    }
+
+    // ---- Feedback (saved to server -> feedback.json) ----
+    function captureFeedback() {
+      const run = EMBEDDED_DATA.runs[currentIndex];
+      if (!run) return;
+      const text = document.getElementById("feedback").value;
+      if (text.trim() === "") {
+        delete feedbackMap[run.id];
+      } else {
+        feedbackMap[run.id] = text;
+      }
+    }
+
+    function feedbackPayload(complete, includeAll = false) {
+      const timestamp = new Date().toISOString();
+      const runIds = complete || includeAll
+        ? [...new Set([...EMBEDDED_DATA.runs.map(run => run.id), ...Object.keys(feedbackMap)])]
+        : Object.keys(feedbackMap);
+      return {
+        reviews: runIds.map(runId => ({ run_id: runId, feedback: feedbackMap[runId] || "", timestamp })),
+        status: complete ? "complete" : "in_progress",
+      };
+    }
+
+    function showError(message) {
+      document.getElementById("review-error").textContent = message;
+    }
+
+    function postFeedback(payload) {
+      // Serialize autosaves and final submission so an older request cannot overwrite completion.
+      saveQueue = saveQueue.then(async () => {
+        try {
+          const response = await fetch("/api/feedback", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+            signal: AbortSignal.timeout(10000),
+          });
+          if (!response.ok) throw new Error("HTTP " + response.status);
+          const result = await response.json();
+          if (result.ok !== true) throw new Error(result.error || "Save was not confirmed");
+          showError("");
+          document.getElementById("download-feedback").hidden = true;
+          return true;
+        } catch (err) {
+          showError("Feedback was not saved: " + err.message + ". Retry Submit All Reviews or download a feedback backup before closing this page.");
+          document.getElementById("download-feedback").hidden = false;
+          return false;
+        }
+      });
+      return saveQueue;
+    }
+
+    async function saveCurrentFeedback() {
+      clearTimeout(saveTimeout);
+      if (submitting || !EMBEDDED_DATA.runs.length || !feedbackDirty) return;
+      captureFeedback();
+      const runId = EMBEDDED_DATA.runs[currentIndex].id;
+      const text = document.getElementById("feedback").value;
+      if (!serverMode) {
+        document.getElementById("feedback-status").textContent = "Stored in this page only. Submit to download feedback.json.";
+        return;
+      }
+      const revision = feedbackRevision;
+      const saved = await postFeedback(feedbackPayload(false));
+      if (saved && feedbackRevision === revision) feedbackDirty = false;
+      if (EMBEDDED_DATA.runs[currentIndex].id === runId && document.getElementById("feedback").value === text) {
+        document.getElementById("feedback-status").textContent = saved ? "Saved to workspace" : "Not saved";
+      }
+    }
+
+    function flushFeedbackOnHide() {
+      if (!serverMode || !feedbackDirty || submitting || !EMBEDDED_DATA.runs.length) return;
+      clearTimeout(saveTimeout);
+      captureFeedback();
+      const body = new Blob(
+        [JSON.stringify(feedbackPayload(false))],
+        { type: "application/json" },
+      );
+      if (navigator.sendBeacon("/api/feedback", body)) feedbackDirty = false;
+    }
+
+    // ---- Done ----
+    function downloadFeedback(complete = false) {
+      captureFeedback();
+      try {
+        const blob = new Blob([JSON.stringify(feedbackPayload(complete, true), null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "feedback.json";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        document.getElementById("feedback-status").textContent = "Download requested. Confirm feedback.json in your browser downloads.";
+        return true;
+      } catch (err) {
+        showError("Could not download feedback: " + err.message + ". Keep this page open and retry.");
+        return false;
+      }
+    }
+
+    async function showDoneDialog() {
+      if (submitting || !EMBEDDED_DATA.runs.length) return;
+      clearTimeout(saveTimeout);
+      captureFeedback();
+      submitting = true;
+      updateNavButtons();
+      document.getElementById("feedback-status").textContent = serverMode ? "Submitting reviews" : "Preparing feedback download";
+      const saved = serverMode ? await postFeedback(feedbackPayload(true)) : downloadFeedback(true);
+      submitting = false;
+      updateNavButtons();
+      if (!saved) {
+        document.getElementById("feedback-status").textContent = "Submission failed";
+        document.getElementById("done-btn").focus();
+        return;
+      }
+      feedbackDirty = false;
+      document.getElementById("done-title").textContent = serverMode ? "Review complete" : "Feedback download requested";
+      document.getElementById("done-message").textContent = serverMode
+        ? "All reviews have been saved to feedback.json in your workspace. Return to your agent session when you are ready."
+        : "Confirm that feedback.json is in your browser downloads, then provide it to your agent. This page cannot verify that the download was saved.";
+      document.getElementById("done-overlay").showModal();
+    }
+
+    function closeDoneDialog() {
+      document.getElementById("done-overlay").close();
+    }
+
+    // Arrow keys belong to the tablist, not the document or the review content.
+    document.getElementById("view-tabs").addEventListener("keydown", (e) => {
+      if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey || e.target.getAttribute("role") !== "tab") return;
+      const tabs = [...document.querySelectorAll(".view-tab")];
+      let index = tabs.indexOf(e.target);
+      if (e.key === "ArrowLeft") index = (index + tabs.length - 1) % tabs.length;
+      else if (e.key === "ArrowRight") index = (index + 1) % tabs.length;
+      else if (e.key === "Home") index = 0;
+      else if (e.key === "End") index = tabs.length - 1;
+      else return;
+      e.preventDefault();
+      tabs[index].focus();
+      switchView(tabs[index].id.replace("tab-", ""));
+    });
+
+    // ---- Util ----
+    function getDownloadUri(file) {
+      if (file.data_uri) return file.data_uri;
+      if (file.data_b64) return "data:application/octet-stream;base64," + file.data_b64;
+      if (file.type === "text") return "data:text/plain;charset=utf-8," + encodeURIComponent(file.content);
+      return "#";
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement("div");
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // ---- View switching ----
+    function switchView(view) {
+      for (const name of ["outputs", "benchmark"]) {
+        const selected = view === name;
+        const tab = document.getElementById("tab-" + name);
+        tab.classList.toggle("active", selected);
+        tab.setAttribute("aria-selected", String(selected));
+        tab.tabIndex = selected ? 0 : -1;
+        const panel = document.getElementById("panel-" + name);
+        panel.classList.toggle("active", selected);
+        panel.hidden = !selected;
+      }
+    }
+
+    // ---- Benchmark rendering ----
+    function renderBenchmark() {
+      const data = EMBEDDED_DATA.benchmark;
+      if (!data) return;
+      if (typeof data !== "object" || Array.isArray(data)) {
+        throw new Error("benchmark data must be an object");
+      }
+
+      // Show the tabs
+      document.getElementById("view-tabs").hidden = false;
+      const outputPanel = document.getElementById("panel-outputs");
+      outputPanel.setAttribute("role", "tabpanel");
+      outputPanel.removeAttribute("aria-label");
+      outputPanel.setAttribute("aria-labelledby", "tab-outputs");
+      outputPanel.tabIndex = 0;
+
+      const container = document.getElementById("benchmark-content");
+      const summary = data.run_summary && typeof data.run_summary === "object" && !Array.isArray(data.run_summary)
+        ? data.run_summary
+        : {};
+      const metadata = data.metadata && typeof data.metadata === "object" && !Array.isArray(data.metadata)
+        ? data.metadata
+        : {};
+      const notes = Array.isArray(data.notes) ? data.notes.filter(note => typeof note === "string") : [];
+
+      let html = "";
+
+      // Header
+      html += "<h2 style='font-family: Poppins, sans-serif; margin-bottom: 0.5rem;'>Benchmark Results</h2>";
+      html += "<p style='color: var(--text-muted); font-size: 0.875rem; margin-bottom: 1.25rem;'>";
+      if (metadata.skill_name) html += "<strong>" + escapeHtml(metadata.skill_name) + "</strong>; ";
+      if (metadata.timestamp) html += escapeHtml(metadata.timestamp) + "; ";
+      if (Array.isArray(metadata.evals_run)) html += "Evals: " + escapeHtml(metadata.evals_run.join(", ")) + "; ";
+      const runCounts = metadata.runs_per_configuration;
+      if (runCounts && typeof runCounts === "object") {
+        html += "Runs: " + Object.entries(runCounts)
+          .map(([config, count]) => {
+            const details = count && typeof count === "object" && !Array.isArray(count)
+              ? Object.entries(count).map(([evalId, runs]) => "eval " + escapeHtml(evalId) + ": " + escapeHtml(runs)).join(", ") || "no graded runs"
+              : escapeHtml(count);
+            return escapeHtml(config.replace(/_/g, " ")) + ": " + details;
+          })
+          .join("; ");
+      } else {
+        html += escapeHtml(runCounts ?? "?") + " runs per configuration";
+      }
+      html += "</p>";
+
+      // Summary table
+      const configs = Object.keys(summary).filter(k => k !== "delta");
+      const labels = configs.map(config =>
+        config.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())
+      );
+      const delta = summary.delta || {};
+      const hasDelta = configs.length >= 2 && Object.keys(delta).length > 0;
+
+      function fmtStat(stat, pct, decimals = 1) {
+        if (
+          !stat || typeof stat !== "object" || Array.isArray(stat) ||
+          typeof stat.mean !== "number" || !Number.isFinite(stat.mean) ||
+          typeof stat.stddev !== "number" || !Number.isFinite(stat.stddev)
+        ) return "Not available";
+        const suffix = pct ? "%" : "";
+        const m = pct ? (stat.mean * 100).toFixed(0) : stat.mean.toFixed(decimals);
+        const s = pct ? (stat.stddev * 100).toFixed(0) : stat.stddev.toFixed(decimals);
+        return m + suffix + ", standard deviation " + s + suffix;
+      }
+
+      function deltaClass(val, higherIsBetter = true) {
+        if (!val) return "";
+        const n = parseFloat(val);
+        if ((n > 0) === higherIsBetter) return "benchmark-delta-positive";
+        if ((n < 0) === higherIsBetter) return "benchmark-delta-negative";
+        return "";
+      }
+
+      if (configs.length === 0) {
+        html += '<p class="benchmark-empty">No graded runs available.</p>';
+      } else {
+        html += '<table class="benchmark-table"><caption>Summary: mean and standard deviation.';
+        if (hasDelta) {
+          html += " Delta compares " + escapeHtml(labels[0]) + " minus " + escapeHtml(labels[1]) + ".";
+        }
+        html += "</caption><thead><tr><th scope='col'>Metric</th>";
+        for (const label of labels) {
+          html += "<th scope='col'>" + escapeHtml(label) + "</th>";
+        }
+        if (hasDelta) html += "<th scope='col'>Delta</th>";
+        html += "</tr></thead><tbody>";
+
+        function appendSummaryRow(name, key, pct, higherIsBetter, deltaSuffix = "", decimals = 1) {
+          html += "<tr><th scope='row'>" + name + "</th>";
+          for (const config of configs) {
+            html += "<td>" + fmtStat((summary[config] || {})[key], pct, decimals) + "</td>";
+          }
+          if (hasDelta) {
+            const value = delta[key];
+            const display = value == null ? "—" : String(value) + deltaSuffix;
+            html += '<td class="' + deltaClass(value, higherIsBetter) + '">' + escapeHtml(display) + "</td>";
+          }
+          html += "</tr>";
+        }
+
+        appendSummaryRow("Pass Rate", "pass_rate", true, true);
+        if (configs.some(config => (summary[config] || {}).time_seconds)) {
+          appendSummaryRow("Time (seconds)", "time_seconds", false, false, "s");
+        }
+        if (configs.some(config => (summary[config] || {}).tokens)) {
+          appendSummaryRow("Tokens", "tokens", false, false, "", 0);
+        }
+        html += "</tbody></table>";
+      }
+
+      // Per-eval breakdown (if runs data available)
+      const runs = Array.isArray(data.runs)
+        ? data.runs
+            .filter(run => run && typeof run === "object")
+            .map(run => ({
+              ...run,
+              expectations: Array.isArray(run.expectations)
+                ? run.expectations.filter(exp =>
+                    exp && typeof exp === "object" &&
+                    typeof exp.text === "string" &&
+                    typeof exp.passed === "boolean"
+                  )
+                : [],
+            }))
+        : [];
+      if (runs.length > 0) {
+        const evalIds = [...new Set(runs.map(r => r.eval_id))]
+          .sort((a, b) => String(a).localeCompare(String(b), undefined, { numeric: true }));
+
+        html += "<h3 style='font-family: Poppins, sans-serif; margin-bottom: 0.75rem;'>Per-Eval Breakdown</h3>";
+
+        const hasTime = runs.some(r => r.result && typeof r.result.time_seconds === "number" && Number.isFinite(r.result.time_seconds));
+        const hasErrors = runs.some(r => r.result && typeof r.result.errors === "number" && Number.isFinite(r.result.errors));
+
+        for (const evalId of evalIds) {
+          const evalRuns = runs.filter(r => r.eval_id === evalId);
+          const evalName = evalRuns[0] && evalRuns[0].eval_name ? evalRuns[0].eval_name : "Eval " + evalId;
+
+          html += "<h4 style='font-family: Poppins, sans-serif; margin: 1rem 0 0.5rem; color: var(--text);'>" + escapeHtml(evalName) + "</h4>";
+          html += '<table class="benchmark-table"><caption>' + escapeHtml(evalName) + ': results by configuration and run</caption>';
+          html += "<thead><tr><th scope='col'>Config</th><th scope='col'>Run</th><th scope='col'>Pass Rate</th>";
+          if (hasTime) html += "<th scope='col'>Time (seconds)</th>";
+          if (hasErrors) html += "<th scope='col'>Errors During Execution</th>";
+          html += "</tr></thead>";
+          html += "<tbody>";
+
+          // Group by config and render with average rows
+          const configGroups = [...new Set(evalRuns.map(r => String(r.configuration ?? "unknown")))];
+          for (let ci = 0; ci < configGroups.length; ci++) {
+            const config = configGroups[ci];
+            const configRuns = evalRuns.filter(r => String(r.configuration ?? "unknown") === config);
+            if (configRuns.length === 0) continue;
+
+            const rowClass = ci === 0 ? "benchmark-row-with" : "benchmark-row-without";
+            const configLabel = config.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+
+            for (const run of configRuns) {
+              const r = run.result && typeof run.result === "object" ? run.result : {};
+              const passRate = typeof r.pass_rate === "number" && Number.isFinite(r.pass_rate) ? r.pass_rate : null;
+              const prClass = passRate == null ? "" : passRate >= 0.8 ? "benchmark-delta-positive" : passRate < 0.5 ? "benchmark-delta-negative" : "";
+              html += '<tr class="' + rowClass + '">';
+              html += "<th scope='row'>" + escapeHtml(configLabel) + "</th>";
+              html += "<td>" + escapeHtml(run.run_number ?? "?") + "</td>";
+              html += '<td class="' + prClass + '">' + (passRate == null ? "Not available" : (passRate * 100).toFixed(0) + "% (" + escapeHtml(r.passed ?? "?") + "/" + escapeHtml(r.total ?? "?") + ")") + "</td>";
+              if (hasTime) html += "<td>" + (typeof r.time_seconds === "number" && Number.isFinite(r.time_seconds) ? r.time_seconds.toFixed(1) : "Not available") + "</td>";
+              if (hasErrors) html += "<td>" + (
+                typeof r.errors === "number" && Number.isFinite(r.errors)
+                  ? escapeHtml(r.errors)
+                  : "Not available"
+              ) + "</td>";
+              html += "</tr>";
+            }
+
+            // Average row
+            const rates = configRuns
+              .map(r => r.result && r.result.pass_rate)
+              .filter(rate => typeof rate === "number" && Number.isFinite(rate));
+            const avgRate = rates.length ? rates.reduce((a, b) => a + b, 0) / rates.length : null;
+            const avgPrClass = avgRate == null ? "" : avgRate >= 0.8 ? "benchmark-delta-positive" : avgRate < 0.5 ? "benchmark-delta-negative" : "";
+            html += '<tr class="benchmark-row-avg ' + rowClass + '">';
+            html += "<th scope='row'>" + escapeHtml(configLabel) + "</th>";
+            html += "<td>Average</td>";
+            html += '<td class="' + avgPrClass + '">' + (avgRate == null ? "Not available" : (avgRate * 100).toFixed(0) + "%") + "</td>";
+            if (hasTime) {
+              const times = configRuns.map(r => (r.result || {}).time_seconds).filter(t => typeof t === "number" && Number.isFinite(t));
+              html += "<td>" + (times.length ? (times.reduce((a, b) => a + b, 0) / times.length).toFixed(1) : "Not available") + "</td>";
+            }
+            if (hasErrors) html += "<td></td>";
+            html += "</tr>";
+          }
+          html += "</tbody></table>";
+
+          // Per-assertion detail for this eval
+          const runsWithExpectations = {};
+          for (const config of configGroups) {
+            runsWithExpectations[config] = evalRuns.filter(r =>
+              String(r.configuration ?? "unknown") === config &&
+              r.expectations.length > 0
+            );
+          }
+          const hasAnyExpectations = Object.values(runsWithExpectations).some(runs => runs.length > 0);
+          if (hasAnyExpectations) {
+            // Collect all unique assertion texts across all configs
+            const allAssertions = [];
+            const seen = new Set();
+            for (const config of configGroups) {
+              for (const run of runsWithExpectations[config]) {
+                for (const exp of run.expectations) {
+                  if (!seen.has(exp.text)) {
+                    seen.add(exp.text);
+                    allAssertions.push(exp.text);
+                  }
+                }
+              }
+            }
+
+            html += '<table class="benchmark-table" style="margin-top: 0.5rem;"><caption>' + escapeHtml(evalName) + ': assertion results and evidence</caption>';
+            html += "<thead><tr><th scope='col'>Assertion</th>";
+            for (const config of configGroups) {
+              const label = config.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+              html += "<th scope='col'>" + escapeHtml(label) + "</th>";
+            }
+            html += "</tr></thead><tbody>";
+
+            for (const assertionText of allAssertions) {
+              html += "<tr><th scope='row'>" + escapeHtml(assertionText) + "</th>";
+
+              for (const config of configGroups) {
+                html += "<td>";
+                for (const run of runsWithExpectations[config]) {
+                  const exp = run.expectations.find(e => e.text === assertionText);
+                  if (exp) {
+                    const cls = exp.passed ? "benchmark-delta-positive" : "benchmark-delta-negative";
+                    const verdict = exp.passed ? "Pass" : "Fail";
+                    html += '<p class="' + cls + '">Run ' + escapeHtml(run.run_number ?? "?") + ": " + verdict + "</p>";
+                    if (exp.evidence) html += "<p>Evidence: " + escapeHtml(exp.evidence) + "</p>";
+                  } else {
+                    html += "<p>Run " + escapeHtml(run.run_number ?? "?") + ": Not evaluated</p>";
+                  }
+                }
+                html += "</td>";
+              }
+              html += "</tr>";
+            }
+            html += "</tbody></table>";
+          }
+        }
+      }
+
+      // Notes
+      if (notes.length > 0) {
+        html += '<div class="benchmark-notes">';
+        html += "<h3>Analysis Notes</h3>";
+        html += "<ul>";
+        for (const note of notes) {
+          html += "<li>" + escapeHtml(note) + "</li>";
+        }
+        html += "</ul></div>";
+      }
+
+      container.innerHTML = html;
+    }
+
+    // ---- Start ----
+    async function start() {
+      if (!await init()) return;
+      try {
+        renderBenchmark();
+      } catch (error) {
+        document.getElementById("benchmark-content").textContent = "Benchmark data could not be rendered.";
+        showError("Benchmark data could not be rendered: " + (error.message || error));
+      }
+    }
+    start();
+  </script>
+</body>
+</html>

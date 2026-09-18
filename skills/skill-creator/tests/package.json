@@ -1,0 +1,10 @@
+{
+  "private": true,
+  "scripts": {
+    "test": "playwright test accessibility.spec.js --workers=1 --reporter=line"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.11.0",
+    "@playwright/test": "^1.58.2"
+  }
+}
