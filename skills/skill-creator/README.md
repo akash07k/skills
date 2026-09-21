@@ -32,12 +32,16 @@ evaluator stops when the CLI reports another enabled skill with the original
 name. CLI versions that omit skill-discovery events cannot provide that check.
 Description rewriting runs without tools.
 
-The JSONL event integration is verified with Copilot CLI 1.0.84-5 and 1.0.86.
-When `session.skills_loaded` is present, candidate discovery is validated;
-1.0.86 omits that event, so selection comes from streamed tool calls. No-tool
-answers still require a successful terminal `result`. Authentication/model
-errors, timeouts, explicit failed discovery, and invalid or incomplete streams
-are errors rather than negative scores.
+The JSONL event integration is verified with Copilot CLI 1.0.84-5, 1.0.86,
+and 1.0.87-0. Version 1.0.87 can emit empty `session.skills_loaded` snapshots
+before and after the populated snapshot, so the evaluator treats those events
+as incremental and rejects only an explicitly disabled candidate or a reported
+original-skill conflict. Version 1.0.86 omits the event, so selection comes
+from streamed tool calls. The runner also avoids `--no-auto-login`, which
+1.0.87 incorrectly applies before token authentication. `--no-ask-user` keeps
+evaluation non-interactive. No-tool answers still require a successful terminal
+`result`. Authentication/model errors, timeouts, invalid discovery state, and
+invalid or incomplete streams are errors rather than negative scores.
 
 The optimization loop reuses the held-out set to select the highest-scoring
 attempt. Its reported best test score is therefore an optimistically biased

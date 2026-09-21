@@ -126,7 +126,8 @@ def run_single_query(
         ]
         diagnostics = deque(maxlen=16)
         completed = False
-        discovered = None
+        populated_discovery_reported = False
+        candidate_discovered = False
         pending_tool_name = None
         pending_tool_id = None
         accumulated_json = ""
@@ -140,6 +141,8 @@ def run_single_query(
             )
 
         def decision(tool_name, arguments):
+            if populated_discovery_reported and not candidate_discovered:
+                raise failure("did not discover the enabled candidate skill")
             if not isinstance(tool_name, str) or not tool_name:
                 raise failure("returned an invalid tool name")
             if not isinstance(arguments, dict):
@@ -194,6 +197,9 @@ def run_single_query(
                 # Stop at the first tool decision, before tool execution completes.
                 if event.get("type") == "session.skills_loaded":
                     loaded_skills = data.get("skills", [])
+                    populated_discovery_reported = (
+                        populated_discovery_reported or bool(loaded_skills)
+                    )
                     competing_skill = next((
                         skill for skill in loaded_skills
                         if skill.get("name") == skill_name and skill.get("enabled") is True
@@ -204,12 +210,16 @@ def run_single_query(
                             f" ({competing_skill.get('path', 'path unknown')}); run from a project"
                             " that does not contain or install that skill"
                         )
-                    discovered = any(
-                        skill.get("name") == clean_name and skill.get("enabled") is True
-                        for skill in loaded_skills
-                    )
-                    if not discovered:
-                        raise failure("did not discover the enabled candidate skill")
+                    candidate = next((
+                        skill for skill in loaded_skills
+                        if skill.get("name") == clean_name
+                    ), None)
+                    if candidate and candidate.get("enabled") is not True:
+                        raise failure(
+                            "reported the candidate skill as disabled"
+                            f" ({candidate.get('path', 'path unknown')})"
+                        )
+                    candidate_discovered = candidate_discovered or bool(candidate)
                 elif event.get("type") == "assistant.tool_call_delta":
                     tool_call_id = data.get("toolCallId")
                     if not isinstance(tool_call_id, str) or not tool_call_id.strip():
@@ -237,6 +247,8 @@ def run_single_query(
                 elif event.get("type") == "tool.execution_start":
                     return decision(data.get("toolName"), data.get("arguments"))
                 elif event.get("type") == "result":
+                    if populated_discovery_reported and not candidate_discovered:
+                        raise failure("did not discover the enabled candidate skill")
                     completed = True
 
             try:

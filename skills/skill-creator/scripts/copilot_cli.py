@@ -12,7 +12,7 @@ def copilot_command(model: str | None, tools: tuple[str, ...] = ()) -> list[str]
         raise FileNotFoundError("Copilot CLI was not found on PATH. Install Copilot CLI and run copilot login.")
     command = [
         executable, "--output-format", "json", "--stream", "on",
-        "--no-auto-update", "--no-auto-login", "--no-ask-user",
+        "--no-auto-update", "--no-ask-user",
         "--disable-builtin-mcps", "--available-tools", *(tools or ("none",)),
     ]
     if "skill" in tools:
