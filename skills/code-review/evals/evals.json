@@ -1,0 +1,99 @@
+{
+  "skill_name": "code-review",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Review this TypeScript change as a PR reviewer. Do not modify code. The requirement is to normalize user IDs using the existing helper. Existing src/lib/ids.ts exports `normalizeId(raw: string): string` as `return raw.trim().toLowerCase()`. The changed lines in src/users/normalize.ts are:\n1 import { normalizeId } from '../lib/ids';\n2 export interface IdNormalizer { normalize(raw: string): string }\n3 export class UserIdNormalizer implements IdNormalizer {\n4   normalize(raw: string): string { return normalizeId(raw); }\n5 }\n6 export function normalizeUserId(raw: string): string {\n7   const normalizer: IdNormalizer = new UserIdNormalizer();\n8   return normalizer.normalize(raw);\n9 }\nThe caller changed from `normalizeId(request.params.id)` to `normalizeUserId(request.params.id)`. There are no other callers or planned implementations. Tests cover trimming and lowercasing. Provide the full review checklist and verdict, with actionable findings and line numbers.",
+      "expected_output": "Identify the unnecessary interface/class/wrapper, suggest calling the existing normalizeId helper directly, avoid inventing unrelated bugs, and provide the full checklist.",
+      "files": [],
+      "expectations": [
+        "The review includes checklist sections for all six axes, verification, and a verdict.",
+        "A finding identifies the IdNormalizer interface and UserIdNormalizer class or normalizeUserId wrapper as unnecessary, and recommends calling the existing normalizeId helper directly.",
+        "The review does not invent a correctness failure, and does not claim to have run the tests."
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Review this TypeScript PR without editing it. The listUsers(page) API uses one-based pages; page 1 must return the first 25 users. Previously src/users/list.ts used `const offset = (page - 1) * 25`. The changed lines are:\n10 const policy = new PagingPolicy(25);\n11 const offset = policy.offset(page);\n12 return db.users.list({ offset, limit: 25 });\nIn new src/users/paging.ts:\n1 export class PagingPolicy {\n2   constructor(private readonly size: number) {}\n3   offset(page: number): number { return page * this.size; }\n4 }\nThe PR only tests `new PagingPolicy(25).offset(0) === 0`; it has no coverage for page 1. The requirement did not ask for configurable page sizes or multiple paging strategies. Provide the full review checklist and verdict; prioritize consequential findings and suggest a concrete fix.",
+      "expected_output": "Flag the off-by-one error as required ahead of the unnecessary paging abstraction, suggest restoring `(page - 1) * 25` or an equivalent one-based offset, and mention the missing page-1 regression test.",
+      "files": [],
+      "expectations": [
+        "The review includes checklist sections for all six axes, verification, and a verdict.",
+        "The first substantive finding identifies the one-based paging error at paging.ts:3 or its caller, explains that page 1 skips the first 25 users, and gives a correct offset formula.",
+        "The review identifies PagingPolicy as unnecessary for this single fixed-size use and requests a page-1 regression test."
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Review this TypeScript change without editing. An order and its ledger entry must either both persist or neither persist. Previously src/orders/save.ts made two independent inserts. The change uses the repository's existing db.transaction API:\n1 export async function saveOrder(db: Database, order: Order): Promise<void> {\n2   await db.transaction(async tx => {\n3     await tx.orders.insert(order);\n4     await tx.ledger.insert({ orderId: order.id, amount: order.total });\n5   });\n6 }\nThe order already has an ID and total before saveOrder is called. Tests verify both rows are saved on success and neither row is saved when the ledger insert fails. The transaction API rolls back rejected callbacks. No new dependency or configurable strategy was added. Provide the full review checklist and verdict. Flag overengineering only if you find a concrete unnecessary part, not just because a transaction adds lines.",
+      "expected_output": "Recognize the transaction as required for atomicity, avoid a speculative overengineering finding, and produce a checklist and evidence-based verdict without claiming to have run tests.",
+      "files": [],
+      "expectations": [
+        "The review includes checklist sections for all six axes, verification, and a verdict.",
+        "The review recognizes that the transaction is required for atomicity and does not request its removal as overengineering.",
+        "The review makes no unsupported claim that it ran tests or found a correctness defect."
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "Review this small TypeScript change without editing it. The requirement is to show `No tags` for an empty tag list; otherwise join tags with a comma and space. The new src/tags/summary.ts contains:\n1 export function tagSummary(tags: string[]): string {\n2   if (tags.length === 0) return 'No tags';\n3   return tags.join(', ');\n4 }\nThe project has no existing tag-formatting helper. Tests cover an empty list, one tag, and multiple tags. Provide the full review checklist and verdict. Do not ask to extract a helper or add a dependency solely because it could be reused in the future.",
+      "expected_output": "Approve a simple, correct change without inventing complexity, readability, or architecture problems; distinguish described tests from tests actually run.",
+      "files": [],
+      "expectations": [
+        "The review includes checklist sections for all six axes, verification, and a verdict.",
+        "The verdict approves the correct simple change without requiring a speculative abstraction, helper extraction, or dependency.",
+        "The review distinguishes tests described in the prompt from tests actually executed by the reviewer.",
+        "The small change receives a concise coverage account limited to the supplied file and lines rather than a fabricated claim of repository-wide coverage."
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "Review this TypeScript shipping-quote change without editing it. The spec defines domestic pricing as priority `weight * 4 + 12` and standard `weight * 2 + 5`, international pricing as priority `weight * 8 + 20` and standard `weight * 5 + 10`. Missing or unsupported regions must be rejected, not quoted. The changed src/shipping/quote.ts is:\n1 export function quote(order: Order): number {\n2   const z = order.region ?? 'domestic';\n3   const x = order.items.reduce((v, item) => v + item.weight, 0);\n4   const y = z === 'domestic'\n5     ? (order.priority ? x * 4 + 12 : x * 2 + 5)\n6     : z === 'international'\n7     ? (order.priority ? x * 8 + 20 : x * 5 + 10)\n8     : 0;\n9   if (z === 'domestic') {\n10     if (order.priority) return y;\n11     return y;\n12   }\n13   if (z === 'international') {\n14     if (order.priority) return y;\n15     return y;\n16   }\n17   return y;\n18 }\nTests cover only domestic priority and international standard. The surrounding code has no quote helper. Provide the full review checklist and verdict, with line-numbered findings ordered by impact. Separate demonstrable correctness issues from readability and overengineering suggestions.",
+      "expected_output": "Require rejection of missing and unsupported regions rather than silently defaulting or returning zero, point out redundant conditionals and unclear naming with a simpler alternative, and identify missing error-case tests without claiming tests were run.",
+      "files": [],
+      "expectations": [
+        "The review includes checklist sections for all six axes, verification, and a verdict.",
+        "The highest-priority finding identifies that missing regions default to domestic and unsupported regions return zero despite the spec requiring rejection.",
+        "The review identifies unclear names or redundant branches with a simpler alternative and notes missing error-case test coverage."
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "Review the synthetic TypeScript PR in the supplied large-pr.diff without editing it. The diff adds zone-rate lookup tables and a lookup API. The supplied approved-rates.csv is the authoritative schedule for every zone; every rate in the PR must match it exactly. The lookup API must reject unknown zones and is called frequently on a request path. No existing helper or alternate provider is specified. Tests are included in the diff, but no test results are provided. Thoroughly inspect or mechanically verify every changed area of this 22-file, 16,105-added-line PR; do not infer data correctness from a sample. Deliver one consolidated review with all actionable findings and remedies, the full six-axis checklist, a coverage account for all changed files and lines, and a verdict. If you cannot finish coverage, report confirmed partial findings and the remaining areas with an incomplete verdict rather than approving.",
+      "expected_output": "Account for 22 changed files and 16,105 added lines; find all three discrepancies versus approved-rates.csv including the final zone; identify the unknown-zone fallback and the per-call table merge or needless wrapper; consolidate findings and recommendations rather than streaming comments, and state any incomplete coverage.",
+      "files": ["evals/files/large-pr.diff", "evals/files/approved-rates.csv"],
+      "expectations": [
+        "The review accounts for all 22 changed files and 16,105 added lines and describes how the 16,000 rates were checked against the approved schedule.",
+        "The review identifies all three incorrect rates: ZONE-00037 (approved 1372, actual 1391), ZONE-08324 (approved 1912, actual 1903), and ZONE-15999 (approved 1742, actual 1769).",
+        "The review identifies the unknown-zone zero fallback in src/zones/lookup.ts and recommends rejecting unknown IDs.",
+        "The review identifies the per-call table merge and unnecessary one-implementation provider or wrapper with a concrete simpler replacement.",
+        "The output delivers one consolidated list of actionable findings and recommendations followed by the full six-axis checklist and a supported verdict; if coverage is partial, it reports what remains and does not approve.",
+        "The review does not claim tests were run and notes that tests miss unknown zones or discrepant schedule entries."
+      ]
+    },
+    {
+      "id": 7,
+      "prompt": "Audit the entire supplied customer-directory project for correctness, overengineering, readability, architecture, security, and performance. This is a whole-project audit, not a pull request; there is no diff. Read the project's own conventions and behavior specification before assessing code. Include all first-party source, tests, and relevant configuration in scope, and inventory exclusions explicitly. Deliver one consolidated report with every actionable finding and recommendation, precise path and line number or range for each finding, full six-axis checklist, coverage by file category, and an audit verdict. If any in-scope file cannot be examined, identify it and mark the audit incomplete. Do not edit the project.",
+      "expected_output": "Read AGENTS.md, README.md and config; inspect all eight project files; report the blank-ID behavior and redundant customer normalizer against the existing helper, the quadratic deduplication in src/batch.js, and the missing blank-ID test, with precise paths and lines. Give an audit-complete verdict rather than merge approval, and do not fabricate test results.",
+      "files": [
+        "evals/files/project-audit/AGENTS.md",
+        "evals/files/project-audit/README.md",
+        "evals/files/project-audit/.editorconfig",
+        "evals/files/project-audit/package.json",
+        "evals/files/project-audit/src/ids.js",
+        "evals/files/project-audit/src/customer.js",
+        "evals/files/project-audit/src/batch.js",
+        "evals/files/project-audit/test/customer.test.js"
+      ],
+      "expectations": [
+        "The audit names AGENTS.md and README.md as conventions or behavior sources and covers all eight first-party project files, including tests, package.json, and .editorconfig.",
+        "A precise src/customer.js line or line-range finding explains that blank IDs return null instead of throwing, and recommends using the existing normalizeId helper.",
+        "A finding with precise src/customer.js lines identifies the redundant CustomerIdNormalizer class as a deviation from the project's convention and recommends deleting it.",
+        "A precise src/batch.js line or line-range finding identifies repeated indexOf searches as quadratic and recommends Set-based deduplication that preserves order.",
+        "The audit identifies the missing blank-ID regression test with a precise test/customer.test.js line or range, without falsely claiming test execution.",
+        "The final report consolidates actionable findings and recommendations, includes a six-axis checklist and scoped coverage, and uses an audit-complete or honestly incomplete verdict rather than merge approval.",
+        "Every substantive finding includes a precise existing file path and line number or smallest relevant line range; no finding relies on a path-only or invented location."
+      ]
+    }
+  ]
+}

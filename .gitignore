@@ -10,6 +10,9 @@ __pycache__/
 test-results/
 playwright-report/
 skill-creator-results/
+skills/*-workspace/
+skills/code-review/evals/files/approved-rates.csv
+skills/code-review/evals/files/large-pr.diff
 logs/
 *.log
 
