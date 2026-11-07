@@ -2,7 +2,6 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' https://cdn.sheetjs.com; style-src 'unsafe-inline'; img-src data: blob:; frame-src data: blob:; connect-src 'self'; base-uri 'none'; form-action 'none'">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Eval Review</title>
   <style>
@@ -649,6 +648,7 @@
     let feedbackDirty = false;
     let feedbackRevision = 0;
     let lastCompleteSnapshot = null;  // reviews last saved with status "complete"
+    let feedbackLoadWarning = "";
     const serverMode = EMBEDDED_DATA.server_mode === true;
 
     // ---- Init ----
@@ -667,19 +667,39 @@
           const resp = await fetch("/api/feedback", { signal: AbortSignal.timeout(10000) });
           if (!resp.ok) throw new Error("HTTP " + resp.status);
           const data = await resp.json();
-          if (Array.isArray(data.reviews)) {
-            for (const r of data.reviews) feedbackMap[r.run_id] = r.feedback;
-          } else if (data && typeof data === "object") {
+          const isReviews = Array.isArray(data.reviews);
+          const saved = isReviews
+            ? Object.fromEntries(data.reviews.filter(r =>
+                r && typeof r.run_id === "string" && typeof r.feedback === "string"
+              ).map(r => [r.run_id, r.feedback]))
+            : data;
+          const ambiguous = [];
+          for (const [legacyId, currentId] of Object.entries(EMBEDDED_DATA.legacy_run_ids || {})) {
+            if (!saved || typeof saved[legacyId] !== "string") continue;
+            if (currentId === null) {
+              ambiguous.push(legacyId);
+            } else if (typeof saved[currentId] !== "string") {
+              saved[currentId] = saved[legacyId];
+              delete saved[legacyId];
+            }
+          }
+          if (ambiguous.length) {
+            feedbackLoadWarning = "Ambiguous legacy feedback IDs: " + ambiguous.join(", ") +
+              ". These reviews are preserved without assigning them to a run.";
+          }
+          if (isReviews) {
+            feedbackMap = saved;
+          } else if (saved && typeof saved === "object") {
             // Spec feedback.json: flat {"eval-name": "feedback"} keyed by run ID or eval directory.
             const used = new Set();
             for (const run of EMBEDDED_DATA.runs) {
-              const key = [run.id, run.eval_dir].find(k => typeof k === "string" && typeof data[k] === "string");
-              if (key !== undefined && data[key].trim()) {
-                feedbackMap[run.id] = data[key];
+              const key = [run.id, run.eval_dir].find(k => typeof k === "string" && typeof saved[k] === "string");
+              if (key !== undefined && saved[key].trim()) {
+                feedbackMap[run.id] = saved[key];
                 used.add(key);
               }
             }
-            for (const [key, value] of Object.entries(data)) {
+            for (const [key, value] of Object.entries(saved)) {
               if (!used.has(key) && typeof value === "string" && value.trim()) feedbackMap[key] = value;
             }
           }
@@ -749,7 +769,7 @@
 
       // Prompt
       document.getElementById("prompt-text").textContent = run.prompt;
-      showError("");
+      showError(feedbackLoadWarning);
 
       // Config badge
       const badge = document.getElementById("config-badge");
@@ -1014,17 +1034,39 @@
       content.hidden = true;
       document.getElementById("grades-toggle").setAttribute("aria-expanded", "false");
 
-      const summary = grading.summary && typeof grading.summary === "object"
+      const suppliedSummary = grading.summary && typeof grading.summary === "object"
         ? grading.summary
         : {};
       // Spec name first; legacy grading files use "expectations".
-      const gradedResults = Array.isArray(grading.assertion_results) ? grading.assertion_results : grading.expectations;
+      const gradedResults = "assertion_results" in grading ? grading.assertion_results : grading.expectations;
       const rawExpectations = Array.isArray(gradedResults) ? gradedResults : [];
       const expectations = rawExpectations.filter(exp =>
         exp && typeof exp === "object" &&
         typeof exp.text === "string" &&
         typeof exp.passed === "boolean"
       );
+      const validRate = value =>
+        typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= 1;
+      let summary = validRate(suppliedSummary.pass_rate) ? suppliedSummary : {};
+      let summaryNote = "";
+      if (expectations.length > 0 && expectations.length === rawExpectations.length) {
+        const passed = expectations.filter(exp => exp.passed).length;
+        const total = expectations.length;
+        summary = { passed, failed: total - passed, total, pass_rate: Number((passed / total).toFixed(4)) };
+        if (!validRate(suppliedSummary.pass_rate)) {
+          summaryNote = "No usable summary; computed it from the assertion results.";
+        } else if (
+          Math.abs(suppliedSummary.pass_rate - summary.pass_rate) > 0.005 ||
+          ["passed", "failed", "total"].some(key =>
+            typeof suppliedSummary[key] === "number" && Number.isFinite(suppliedSummary[key]) &&
+            suppliedSummary[key] !== summary[key]
+          )
+        ) {
+          summaryNote = "Supplied summary disagrees with its assertion results; using the computed values.";
+        }
+      } else if (!validRate(suppliedSummary.pass_rate)) {
+        summaryNote = "No usable summary and no complete assertion results.";
+      }
 
       const wrapper = document.createElement("div");
       wrapper.style.padding = "1rem";
@@ -1048,6 +1090,11 @@
         `${displayCount(summary.passed)} passed, ${displayCount(summary.failed)} failed of ${displayCount(summary.total)}`;
       summaryLine.appendChild(counts);
       wrapper.appendChild(summaryLine);
+      if (summaryNote) {
+        const note = document.createElement("p");
+        note.textContent = summaryNote;
+        wrapper.appendChild(note);
+      }
 
       const list = document.createElement("ul");
       list.className = "assertion-list";
@@ -1294,7 +1341,7 @@
           }
           const result = await response.json();
           if (result.ok !== true) throw new Error(result.error || "Save was not confirmed");
-          showError("");
+          showError(feedbackLoadWarning);
           document.getElementById("download-feedback").hidden = true;
           return true;
         } catch (err) {

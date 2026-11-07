@@ -203,7 +203,7 @@ Output from the grader agent. Located at `<run-dir>/grading.json`.
 
 **Fields:**
 - `assertion_results[]`: Graded objects with `text` (statement string), `passed` (boolean), and `evidence` (string), not the statement strings used in task input files. Older grading files name this array `expectations`; the aggregator and viewer still read it when `assertion_results` is absent.
-- `summary`: Aggregate pass/fail counts
+- `summary`: Aggregate pass/fail counts; `pass_rate` must be a finite fraction from 0 to 1. The aggregator and Formal Grades viewer compute the summary from a complete, valid assertion list. They report missing or disagreeing supplied summaries. A valid supplied summary is used only when the assertion list is absent, empty or malformed.
 - `execution_metrics`: Tool usage and execution details (from executor's metrics.json)
 - `timing`: Wall clock timing (from timing.json). `total_duration_seconds` here includes grader time, so the aggregator uses it only when `timing.json` and `executor_duration_seconds` are both unavailable.
 - `claims`: Extracted and verified claims from the output
@@ -391,12 +391,16 @@ Human review feedback. Located at `<workspace>/iteration-<N>/feedback.json`. The
 }
 ```
 
-The review viewer saves a richer format. Each `run_id` is the run path relative to the workspace, with path separators replaced by `-` (for example, `eval-top-months-chart-with_skill`):
+The review viewer saves a richer format. Each `run_id` is `run:` followed by
+the run path relative to the workspace, with `/` separators (for example,
+`run:eval-top-months-chart/with_skill`). Keeping path boundaries prevents
+different directory layouts from sharing an ID; the prefix separates new
+IDs from the old flattened format:
 
 ```json
 {
   "reviews": [
-    {"run_id": "eval-top-months-chart-with_skill", "feedback": "The chart is missing axis labels.", "timestamp": "2026-01-15T10:40:00Z"}
+    {"run_id": "run:eval-top-months-chart/with_skill", "feedback": "The chart is missing axis labels.", "timestamp": "2026-01-15T10:40:00Z"}
   ],
   "status": "complete"
 }
@@ -407,15 +411,24 @@ The review viewer saves a richer format. Each `run_id` is the run path relative 
 
 The viewer server rejects other fields, wrong types, request bodies larger than 1 MB, and `run_id` values that are not runs in the workspace (IDs already saved in `feedback.json` stay accepted). Every `/api/` error is JSON, `{"error": "..."}`. With `--previous-workspace`, `generate_review` reads both formats. A flat-map key that names an eval folder applies to every configuration and run in that eval. A key that names a run ID applies to that run only.
 
+Old IDs with separators replaced by hyphens are matched only when they name
+one run unambiguously. If an old ID matches multiple runs, the viewer reports
+it and preserves the feedback without assigning it to either run. Previous
+iteration loading follows the same rule. Existing orphan reviews remain in
+subsequent saves.
+
 ---
 
 ## comparison.json
 
 Output from blind comparator. Located at `<grading-dir>/comparison-N.json`.
-`winner` is `"A"`, `"B"`, or `"TIE"`. A tie has no winner or loser and skips
-post-hoc `analysis.json` generation. `assertion_results` (assertion checks per
-output) is included only when assertions were supplied. It uses the same name
-as `grading.json`.
+`winner` is `"A"`, `"B"`, `"TIE"`, or `"INCONCLUSIVE"`.
+`TIE` means adequate evidence shows materially equivalent outputs.
+`INCONCLUSIVE` means the evidence cannot support a comparison.
+Neither has a winner or loser, so both skip post-hoc `analysis.json`.
+`assertion_results` (assertion checks per output) is included only when
+supplied assertions can be evaluated for both outputs. It uses the same
+name as `grading.json`.
 
 ```json
 {
@@ -451,24 +464,32 @@ as `grading.json`.
   },
   "assertion_results": {
     "A": {
-      "passed": 4,
-      "total": 5,
-      "pass_rate": 0.80,
+      "passed": 1,
+      "total": 1,
+      "pass_rate": 1.0,
       "details": [
-        {"text": "Output includes name", "passed": true}
+        {"text": "Output includes the required date", "passed": true}
       ]
     },
     "B": {
-      "passed": 3,
-      "total": 5,
-      "pass_rate": 0.60,
+      "passed": 0,
+      "total": 1,
+      "pass_rate": 0.0,
       "details": [
-        {"text": "Output includes name", "passed": true}
+        {"text": "Output includes the required date", "passed": false}
       ]
     }
   }
 }
 ```
+
+Keep the rubric fixed before examining outputs. For unavailable evidence,
+use `null` for that output's rubric or individual numeric scores rather
+than inventing values. Keep the per-output `output_quality` objects, with
+`score: null` for an unavailable score and string lists for strengths and
+weaknesses. Explain missing evidence and the result in `reasoning`.
+Include `assertion_results` only when supplied assertions can be evaluated
+for both outputs. Otherwise, omit the field and explain why.
 
 ---
 
@@ -476,7 +497,7 @@ as `grading.json`.
 
 Output from post-hoc analyzer. Located at `<grading-dir>/analysis.json`.
 This file is generated only when `comparison.json` selects `A` or `B`, not
-when it selects `TIE`.
+when it selects `TIE` or `INCONCLUSIVE`.
 
 ```json
 {

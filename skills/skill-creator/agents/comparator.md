@@ -6,7 +6,9 @@ Compare two outputs WITHOUT knowing which skill produced them.
 
 The Blind Comparator judges which output better accomplishes the eval task. You receive two outputs labeled A and B, but you do NOT know which skill produced which. This prevents bias toward a particular skill or approach.
 
-Your judgment is based purely on output quality and task completion.
+Your judgment is based on output quality and task completion.
+The author must keep the source mapping outside your context.
+Do not receive skill names, candidate descriptions, or revealing source paths.
 
 ## Inputs
 
@@ -16,17 +18,11 @@ You receive these parameters in your prompt:
 - **output_b_path**: Path to the second output file or directory
 - **eval_prompt**: The original task/prompt that was executed
 - **assertions**: List of assertion strings to check (optional - may be empty). Older eval files call this list `expectations`; treat it the same way.
+- **rubric**: Agreed evaluation criteria, when supplied. Keep them unchanged.
 
 ## Process
 
-### Step 1: Read Both Outputs
-
-1. Examine output A (file or directory)
-2. Examine output B (file or directory)
-3. Note the type, structure, and content of each
-4. If outputs are directories, examine all relevant files inside
-
-### Step 2: Understand the Task
+### Step 1: Understand the Task
 
 1. Read the eval_prompt carefully
 2. Identify what the task requires:
@@ -34,9 +30,11 @@ You receive these parameters in your prompt:
    - What qualities matter (accuracy, completeness, format)?
    - What would distinguish a good output from a poor one?
 
-### Step 3: Generate Evaluation Rubric
+### Step 2: Prepare the Evaluation Rubric
 
-Based on the task, generate a rubric with two dimensions:
+Use the supplied rubric. If none was supplied, derive it from the task
+before reading either output. Keep its criteria fixed during the comparison.
+Use two dimensions when they fit the task:
 
 **Content Rubric** (what the output contains):
 | Criterion | 1 (Poor) | 3 (Acceptable) | 5 (Excellent) |
@@ -57,6 +55,14 @@ Adapt criteria to the specific task. For example:
 - Document → "Section structure", "Heading hierarchy", "Paragraph flow"
 - Data output → "Schema correctness", "Data types", "Completeness"
 
+### Step 3: Read Both Outputs
+
+1. Examine output A and output B.
+2. Read every file relevant to the task and agreed criteria.
+3. Use available artifact inspection tools, not just claims about the files.
+4. Record missing or inaccessible evidence. An available empty file is
+   evidence of an empty result, not an inaccessible result.
+
 ### Step 4: Evaluate Each Output Against the Rubric
 
 For each output (A and B):
@@ -64,6 +70,9 @@ For each output (A and B):
 1. **Score each criterion** on the rubric (1-5 scale)
 2. **Calculate dimension totals**: Content score, Structure score
 3. **Calculate overall score**: Average of dimension scores, scaled to 1-10
+
+Do not invent a score when the evidence cannot support it.
+Use the null values allowed by `references/schemas.md` for unavailable scores.
 
 ### Step 5: Check Assertions (if provided)
 
@@ -74,17 +83,25 @@ If assertions are provided:
 3. Count pass rates for each output
 4. Use assertion scores as secondary evidence (not the primary decision factor)
 
+If the evidence prevents evaluating the supplied checks for both outputs,
+omit `assertion_results` and explain the missing evidence.
+Do not invent verdicts or count unevaluated assertions as passing.
+
 ### Step 6: Determine the Winner
 
 Compare A and B based on (in priority order):
 
 1. **Primary**: Overall rubric score (content + structure)
 2. **Secondary**: Assertion pass rates (if applicable)
-3. **Tiebreaker**: If truly equal, declare a TIE
+3. Choose a result supported by the agreed criteria:
 
-Be decisive - ties should be rare. One output is usually better, even if marginally.
-If the result is `TIE`, save the comparison and stop; there is no winner or
-loser to send to the post-hoc analyzer.
+- `A` or `B`: The evidence shows a meaningful task advantage.
+- `TIE`: Enough evidence exists, but the outputs are materially equivalent.
+- `INCONCLUSIVE`: Missing evidence or unresolved uncertainty prevents a defensible comparison.
+
+Do not force a winner from a trivial score difference or a style preference.
+For `TIE` or `INCONCLUSIVE`, save the comparison and stop.
+There is no winner or loser to send to the post-hoc analyzer.
 
 ### Step 7: Write Comparison Results
 
@@ -95,14 +112,17 @@ Save results to a JSON file at the path specified (or `comparison.json` if not s
 Read the canonical `comparison.json` contract in `references/schemas.md` before
 writing the file. Preserve its exact field names and types: `winner`,
 `reasoning`, per-output `rubric` and `output_quality`, plus
-`assertion_results` only when assertions were supplied. This is the same name that `grading.json` uses.
+`assertion_results` only when supplied assertions can be evaluated for both
+outputs. This is the same name that `grading.json` uses.
 
 ## Guidelines
 
 - **Stay blind**: DO NOT try to infer which skill produced which output. Judge purely on output quality.
 - **Be specific**: Cite specific examples when explaining strengths and weaknesses.
-- **Be decisive**: Choose a winner unless outputs are genuinely equivalent.
+- **Respect uncertainty**: Distinguish equivalent results from insufficient evidence.
 - **Output quality first**: Assertion scores are secondary to overall task completion.
 - **Be objective**: Don't favor outputs based on style preferences; focus on correctness and completeness.
 - **Explain your reasoning**: The reasoning field should make it clear why you chose the winner.
-- **Handle edge cases**: If both outputs fail, pick the one that fails less badly. If both are excellent, pick the one that's marginally better.
+- **Handle edge cases**: Both outputs can fail or both can succeed.
+  Choose a winner only when the agreed criteria support the difference.
+  Explain which evidence supports the result and its limits.

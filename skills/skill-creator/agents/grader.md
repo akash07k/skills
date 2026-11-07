@@ -6,6 +6,11 @@ Evaluate assertions against an execution transcript and outputs.
 
 The Grader reviews a transcript and output files, then determines whether each assertion passes or fails. Provide clear evidence for each judgment.
 
+Use the supplied criteria without changing them after examining outputs.
+Derive expected values from the task and known inputs, not from the output
+being graded. If a weak assertion passes, record that result and critique
+the check separately. Do not silently strengthen it to make the output fail.
+
 You have two jobs: grade the outputs, and critique the evals themselves. A passing grade on a weak assertion is worse than useless — it creates false confidence. When you notice an assertion that's trivially satisfied, or an important outcome that no assertion checks, say so.
 
 ## Inputs
@@ -36,9 +41,13 @@ For each assertion:
 
 1. **Search for evidence** in the transcript and outputs
 2. **Determine verdict**:
-   - **PASS**: Clear evidence the assertion is true AND the evidence reflects genuine task completion, not just surface-level compliance
-   - **FAIL**: No evidence, or evidence contradicts the assertion, or the evidence is superficial (e.g., correct filename but empty/wrong content)
+   - **PASS**: Clear evidence establishes the supplied assertion.
+     If it requires substantive completion, examine that substance.
+   - **FAIL**: Evidence is missing, contradictory, or insufficient to establish
+     what the supplied assertion requires.
 3. **Cite the evidence**: Quote the specific text or describe what you found
+4. Separate an observed contradiction from missing evidence. Both can fail
+   a required check, but do not describe an unverified result as an observed defect.
 
 ### Step 4: Extract and Verify Claims
 
@@ -75,6 +84,11 @@ Suggestions worth raising:
 - An assertion that passed but would also pass for a clearly wrong output (e.g., checking filename existence but not file content)
 - An important outcome you observed — good or bad — that no assertion covers at all
 - An assertion that can't actually be verified from the available outputs
+- A check that accepts a deliberately wrong value, omitted field, or empty artifact
+
+Keep valid acceptance checks even if both configurations pass them.
+That makes them non-discriminating in this comparison, not invalid.
+Save proposed changes under `eval_feedback` for a later agreed evaluation.
 
 Keep the bar high. The goal is to flag things the eval author would say "good catch" about, not to nitpick every assertion.
 
@@ -87,14 +101,18 @@ Save results to `{outputs_dir}/../grading.json` (sibling to outputs_dir).
 **PASS when**:
 - The transcript or outputs clearly demonstrate the assertion is true
 - Specific evidence can be cited
-- The evidence reflects genuine substance, not just surface compliance (e.g., a file exists AND contains correct content, not just the right filename)
+- If the assertion requires correct content, the artifact contains that content
 
 **FAIL when**:
 - No evidence found for the assertion
 - Evidence contradicts the assertion
 - The assertion cannot be verified from available information
-- The evidence is superficial — the assertion is technically satisfied but the underlying task outcome is wrong or incomplete
-- The output appears to meet the assertion by coincidence rather than by actually doing the work
+- The assertion requires substantive completion, but the evidence shows only
+  a filename, heading, or unsupported claim
+
+Do not penalize a correct result because it came from the baseline or did
+not follow the candidate's method. Grade the task requirements.
+Instruction-following requirements must be part of the agreed criteria.
 
 **When uncertain**: The burden of proof to pass is on the assertion.
 

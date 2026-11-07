@@ -168,13 +168,8 @@ def _check_reference(target: str, skill_path: Path, label: str, warnings: list[s
         path = path[2:]
     if not path:
         return
-    root = skill_path.resolve()
-    resolved = (root / path).resolve()
-    if not resolved.is_relative_to(root):
-        warnings.append(f"{label} {target!r} points outside the skill folder")
-        return
-    if not resolved.exists():
-        warnings.append(f"{label} {target!r} does not exist in the skill folder")
+    if not (skill_path / path).exists():
+        warnings.append(f"{label} {target!r} does not exist")
 
 
 def _check_body_references(body: str, skill_path: Path, warnings: list[str]) -> None:

@@ -128,6 +128,40 @@ test("formal grades treat model data as text and tolerate malformed expectations
   await checkAccessibility(page);
 });
 
+test("formal grades use complete assertions and agree with the generated benchmark", async ({ page }) => {
+  for (const name of ["disagreeing", "missing", "invalid"]) {
+    await openFile(page, `grades-${name}.html`);
+    await page.getByRole("button", { name: "Formal Grades" }).press("Enter");
+    await expect(page.locator("#grades-content .grade-badge")).toHaveText("25%");
+    await expect(page.locator("#grades-content")).toContainText("1 passed, 3 failed of 4");
+    await expect(page.locator("#grades-content")).toContainText(
+      name === "disagreeing" ? "disagrees with its assertion results" : "No usable summary"
+    );
+    if (name === "disagreeing") {
+      await page.getByRole("tab", { name: "Benchmark" }).click();
+      await expect(page.getByRole("row", { name: /^Pass Rate/ })).toContainText("25%");
+      await page.getByRole("tab", { name: "Outputs" }).click();
+    }
+  }
+  await checkAccessibility(page);
+});
+
+test("formal grades keep valid fallback summaries and reject impossible rates", async ({ page }) => {
+  await openFile(page, "grades-malformed.html");
+  await page.getByRole("button", { name: "Formal Grades" }).press("Enter");
+  await expect(page.locator("#grades-content .grade-badge")).toHaveText("90%");
+  await expect(page.locator("#grades-content")).toContainText("1 malformed grade entries were omitted.");
+  await openFile(page, "grades-invalid-fallback.html");
+  await page.getByRole("button", { name: "Formal Grades" }).press("Enter");
+  await expect(page.locator("#grades-content .grade-badge")).toHaveText("?");
+  await expect(page.locator("#grades-content")).toContainText("No usable summary and no complete assertion results.");
+  await openFile(page, "grades-spec-precedence.html");
+  await page.getByRole("button", { name: "Formal Grades" }).press("Enter");
+  await expect(page.locator("#grades-content .grade-badge")).toHaveText("60%");
+  await expect(page.locator("#grades-content .assertion-item")).toHaveCount(0);
+  await checkAccessibility(page);
+});
+
 test("benchmark render failures remain announced after live initialization", async ({ page }) => {
   const body = readFileSync(path.join(root, "benchmark-error.html"), "utf8");
   await page.route("**/?benchmark-error", route => route.fulfill({ contentType: "text/html", body }));
@@ -263,6 +297,67 @@ test("live viewer loads the flat spec feedback map", async ({ page }) => {
   });
   await page.goto(baseURL);
   await expect(page.getByRole("textbox", { name: "Your Feedback" })).toHaveValue("Flat spec feedback");
+});
+
+test("live viewer migrates unambiguous legacy feedback and reloads new IDs", async ({ page }) => {
+  let saved;
+  let posted;
+  await page.route("**/api/feedback", route => {
+    if (route.request().method() === "GET") return route.fulfill({ json: saved });
+    posted = route.request().postDataJSON();
+    saved = posted;
+    return route.fulfill({ json: { ok: true } });
+  });
+  for (const legacy of [
+    { reviews: [{ run_id: "eval-1-with_skill", feedback: "Legacy review" }] },
+    { "eval-1-with_skill": "Legacy review" },
+  ]) {
+    saved = legacy;
+    posted = undefined;
+    await page.goto(baseURL);
+    const feedback = page.getByRole("textbox", { name: "Your Feedback" });
+    await expect(feedback).toHaveValue("Legacy review");
+    await feedback.fill("Updated review");
+    await expect.poll(() => posted).not.toBeUndefined();
+    expect(posted.reviews).toEqual(expect.arrayContaining([
+      expect.objectContaining({ run_id: "run:eval-1/with_skill", feedback: "Updated review" }),
+    ]));
+    expect(posted.reviews.some(r => r.run_id === "eval-1-with_skill")).toBe(false);
+    await page.reload();
+    await expect(feedback).toHaveValue("Updated review");
+  }
+});
+
+test("colliding legacy IDs stay unassigned while current runs save distinct feedback", async ({ page }) => {
+  const body = readFileSync(path.join(root, "collision.html"), "utf8");
+  let posted;
+  await page.route("**/?collision", route => route.fulfill({ contentType: "text/html", body }));
+  await page.route("**/api/feedback", route => {
+    if (route.request().method() === "GET") {
+      return route.fulfill({ json: { reviews: [
+        { run_id: "eval-1-with_skill", feedback: "Ambiguous old review" },
+      ] } });
+    }
+    posted = route.request().postDataJSON();
+    return route.fulfill({ json: { ok: true } });
+  });
+  await page.goto(baseURL + "/?collision");
+  const feedback = page.getByRole("textbox", { name: "Your Feedback" });
+  await expect(feedback).toHaveValue("");
+  await expect(page.getByRole("alert")).toContainText("Ambiguous legacy feedback IDs");
+  await feedback.fill("First run");
+  await page.getByRole("button", { name: "Next", exact: true }).click();
+  await expect(feedback).toHaveValue("");
+  await expect(page.getByRole("alert")).toContainText("preserved without assigning");
+  await feedback.fill("Second run");
+  await page.getByRole("button", { name: "Submit All Reviews" }).click();
+  await expect.poll(() => posted && posted.status).toBe("complete");
+  expect(posted.reviews).toEqual(expect.arrayContaining([
+    expect.objectContaining({ run_id: "run:eval-1-with_skill", feedback: "First run" }),
+    expect.objectContaining({ run_id: "run:eval-1/with_skill", feedback: "Second run" }),
+    expect.objectContaining({ run_id: "eval-1-with_skill", feedback: "Ambiguous old review" }),
+  ]));
+  expect(new Set(posted.reviews.map(r => r.run_id)).size).toBe(posted.reviews.length);
 });
 
 test("live feedback flushes on page hide", async ({ page }) => {

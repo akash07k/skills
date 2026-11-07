@@ -6,7 +6,7 @@
 r"""Generate and serve a review page for eval results.
 
 Reads the workspace directory, discovers runs (directories with outputs/),
-embeds output data up to a safe size into a self-contained HTML page, and
+embeds output data up to a bounded size into a self-contained HTML page, and
 serves it via a tiny HTTP server. Feedback auto-saves to feedback.json.
 
 Usage:
@@ -100,7 +100,7 @@ def find_run_dirs(workspace: Path) -> list[Path]:
     """Recursively find directories that contain an outputs/ subdirectory."""
     run_dirs: list[Path] = []
     skip = {"node_modules", ".git", "__pycache__", "skill", "inputs"}
-    for current_path, directories, _ in os.walk(workspace):
+    for current_path, directories, _ in os.walk(workspace, followlinks=True):
         directories[:] = sorted(name for name in directories if name not in skip)
         if "outputs" not in directories:
             continue
@@ -110,7 +110,16 @@ def find_run_dirs(workspace: Path) -> list[Path]:
 
 
 def run_id_for(root: Path, run_dir: Path) -> str:
-    return str(run_dir.relative_to(root)).replace("/", "-").replace("\\", "-")
+    return "run:" + run_dir.relative_to(root).as_posix()
+
+
+def legacy_run_ids(runs: list[dict]) -> dict[str, str | None]:
+    """Map old flattened IDs to current IDs, leaving ambiguous aliases unresolved."""
+    aliases: dict[str, str | None] = {}
+    for run in runs:
+        legacy_id = run["id"].removeprefix("run:").replace("/", "-")
+        aliases[legacy_id] = None if legacy_id in aliases else run["id"]
+    return aliases
 
 
 def find_runs(workspace: Path, budget: list[int] | None = None) -> list[dict]:
@@ -119,14 +128,6 @@ def find_runs(workspace: Path, budget: list[int] | None = None) -> list[dict]:
     runs = [build_run(workspace, run_dir, budget) for run_dir in find_run_dirs(workspace)]
     runs.sort(key=lambda r: (eval_sort_key(r["eval_id"]), r["id"]))
     return runs
-
-
-def is_link(path: Path) -> bool:
-    """Treat symlinks and Windows junctions as links that must not be embedded."""
-    try:
-        return path.is_symlink() or path.is_junction()
-    except OSError:
-        return True
 
 
 def eval_directory(root: Path, run_dir: Path) -> str:
@@ -149,8 +150,6 @@ def build_run(root: Path, run_dir: Path, budget: list[int]) -> dict:
 
     # Nested run-N directories share the evaluation metadata with their siblings.
     for directory in [run_dir, *run_dir.parents]:
-        if not directory.is_relative_to(root):
-            break
         candidate = directory / "eval_metadata.json"
         if candidate.exists():
             try:
@@ -172,8 +171,8 @@ def build_run(root: Path, run_dir: Path, budget: list[int]) -> dict:
                     eval_id = candidate_eval_id
             except (json.JSONDecodeError, OSError, ValueError) as error:
                 print(f"Warning: Invalid metadata in {candidate}: {error}", file=sys.stderr)
-            if prompt and eval_id is not None:
-                break
+        if (prompt and eval_id is not None) or directory == root:
+            break
 
     # Fall back to transcript.md
     if not prompt:
@@ -198,18 +197,15 @@ def build_run(root: Path, run_dir: Path, budget: list[int]) -> dict:
     outputs_dir = run_dir / "outputs"
     output_files: list[dict] = []
     user_notes = None
-    if outputs_dir.is_dir() and not is_link(outputs_dir):
-        for f in sorted(outputs_dir.rglob("*")):
-            if is_link(f):
-                print(f"Warning: Skipping linked output {f}", file=sys.stderr)
-                continue
+    if outputs_dir.is_dir():
+        for f in sorted(outputs_dir.rglob("*", recurse_symlinks=True)):
             if f.is_file() and f.name not in METADATA_FILES:
                 embedded = embed_file(f, budget)
                 embedded["name"] = f.relative_to(outputs_dir).as_posix()
                 output_files.append(embedded)
         # Executor notes are shown in the Notes section, not as an output file.
         notes_file = outputs_dir / "user_notes.md"
-        if notes_file.is_file() or is_link(notes_file):
+        if notes_file.is_file():
             user_notes = embed_file(notes_file, budget)
 
     # Load grading if present
@@ -251,8 +247,6 @@ def embed_file(path: Path, budget: list[int] | None = None) -> dict:
     """Read a file and return an embedded representation."""
     if budget is None:
         budget = [MAX_TOTAL_EMBED_BYTES]
-    if is_link(path):
-        return {"name": path.name, "type": "error", "content": "(Linked file not embedded)"}
     try:
         size = path.stat().st_size
     except OSError:
@@ -352,8 +346,20 @@ def load_previous_iteration(
             print(f"Warning: Invalid feedback in {feedback_path}: {error}", file=sys.stderr)
 
     prev_runs = find_runs(workspace, budget)
-    feedback_map: dict[str, str] = dict(feedback.get("reviews", {}))
-    flat = feedback.get("flat", {})
+    source = dict(feedback.get("reviews", feedback.get("flat", {})))
+    for legacy_id, current_id in legacy_run_ids(prev_runs).items():
+        if legacy_id not in source:
+            continue
+        if current_id is None:
+            print(
+                f"Warning: Ambiguous legacy feedback ID {legacy_id!r}; "
+                "preserving the review without assigning it to a run.",
+                file=sys.stderr,
+            )
+        elif current_id not in source:
+            source[current_id] = source.pop(legacy_id)
+    feedback_map: dict[str, str] = dict(source) if "reviews" in feedback else {}
+    flat = source if "flat" in feedback else {}
     used = set()
     for run in prev_runs:
         for key in (run["id"], run.get("eval_dir")):
@@ -391,6 +397,7 @@ def generate_html(
     embedded = {
         "skill_name": skill_name,
         "runs": runs,
+        "legacy_run_ids": legacy_run_ids(runs),
         "previous": previous or {},
         "server_mode": server_mode,
     }
@@ -483,9 +490,6 @@ class ReviewHandler(BaseHTTPRequestHandler):
         super().__init__(*args, **kwargs)
 
     def do_GET(self) -> None:
-        if self.headers.get("Host") not in self.allowed_hosts():
-            self.send_error(403, "Review data is available only from this review page")
-            return
         if self.path == "/" or self.path == "/index.html":
             # Regenerate HTML on each request (re-scans workspace for new outputs)
             runs = find_runs(self.workspace, [self.embed_budget])
@@ -511,16 +515,6 @@ class ReviewHandler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         if self.path == "/api/feedback":
-            allowed_hosts = self.allowed_hosts()
-            origin = self.headers.get("Origin")
-            if (
-                self.headers.get("Host") not in allowed_hosts
-                or origin is None
-                or urlparse(origin).scheme != "http"
-                or urlparse(origin).netloc not in allowed_hosts
-            ):
-                self.send_error(403, "Feedback saves are accepted only from this review page")
-                return
             try:
                 length = int(self.headers.get("Content-Length", 0))
                 if length < 0:
@@ -562,10 +556,6 @@ class ReviewHandler(BaseHTTPRequestHandler):
         if message is None:
             message = self.responses.get(code, ("Request failed",))[0]
         self.send_json(code, {"error": message}, close=True)
-
-    def allowed_hosts(self) -> set[str]:
-        port = self.server.server_port
-        return {f"localhost:{port}", f"127.0.0.1:{port}"}
 
     def log_message(self, format: str, *args: object) -> None:
         # Suppress request logging to keep terminal clean

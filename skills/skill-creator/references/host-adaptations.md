@@ -43,6 +43,13 @@ the host cannot support:
   run, and deliver the skill text or files that you can. Do not claim that a
   benchmark, package or viewer step is complete without its output file.
 
+Check the actual host's tool list and context inheritance before dispatching.
+A child can inherit the author's conversation even when it has a separate
+name. For measurement, use fresh contexts with the complete task and the
+selected configuration. Use the host's lifecycle controls and supported
+skill-loading mechanism. Do not copy another client's tool names, model
+names, or configuration switches.
+
 Make the review file before you change the skill based on the test results, so
 that the user can examine the outputs.
 
@@ -83,7 +90,9 @@ The `.skill` archive is a zip file. The archive does not contain:
 - generated files: `__pycache__/`, `node_modules/`, `.venv/`, `*.pyc`, `.log`
   files and existing `.skill` files
 - dotfiles and dot-directories, such as `.env` and `.git/`
-- symlinks and Windows junctions inside the skill
+
+Linked files and folders are included as their contents. Use trusted local
+skill folders; packaging does not enforce a filesystem sandbox.
 
 The script compares directory names without regard to case. Keep the source
 directory when you need the excluded files.
@@ -97,3 +106,31 @@ Other ways to install a skill:
   `copilot skill add --help` for the inputs that your version accepts.
 - `gh skill` in the GitHub CLI installs and publishes skills from GitHub
   repositories.
+
+## Delivery and publishing choices
+
+At delivery, recommend the action that fits the user's goal. Offer local
+source files, a `.skill` package, installation in the target client, or
+publishing when relevant. Do not ask about publishing during every draft.
+
+Ask for the action first. If its destination is not known, ask for that next.
+A user can authorize several actions together, but do not infer a commit,
+push, pull request, or release from approval of the skill or its tests.
+
+For an approved publishing action, identify the exact skill files,
+repository, destination, and requested visibility. Include only those files.
+Keep unrelated local changes, private inputs, and eval outputs out of the
+publication unless the user explicitly includes them.
+Use the current host's available Git or publishing tools.
+Do not add another publishing runner.
+
+Complete the selected action and report its actual artifact, path, or URL.
+If the host cannot perform it, explain the limitation and provide the
+local files or package. Do not claim that a successful test published a skill.
+
+## Replacing an experimental draft
+
+If an untested draft biases a fresh approach, offer a rewrite or replacement.
+Ask which draft files to replace and whether the user wants a retained copy.
+Act only on that selected draft. Preserve existing user-owned work by default.
+Do not make deletion a condition of authoring, testing, or delivery.

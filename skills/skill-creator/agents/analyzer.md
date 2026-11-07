@@ -6,8 +6,8 @@ Analyze blind comparison results to understand WHY the winner won and generate i
 
 After the blind comparator determines a winner, the Post-hoc Analyzer "unblinds" the results by examining the skills and transcripts. The goal is to extract actionable insights: what made the winner better, and how can the loser be improved?
 
-Run this analyzer only when the comparator selected `A` or `B`. A `TIE` ends
-the comparison without winner/loser analysis.
+Run this analyzer only when the comparator selected `A` or `B`.
+`TIE` and `INCONCLUSIVE` end the comparison without winner/loser analysis.
 
 ## Inputs
 
@@ -159,9 +159,13 @@ You receive these parameters in your prompt:
 For each assertion across all runs (each run's `assertion_results`; older benchmarks call this list `expectations`):
 - Does it **always pass** in both configurations? (may not differentiate skill value)
 - Does it **always fail** in both configurations? (may be broken or beyond capability)
-- Does it **always pass with skill but fail without**? (skill clearly adds value here)
+- Does it **always pass with skill but fail without** in these runs? (an observed contrast to confirm on fresh tasks)
 - Does it **always fail with skill but pass without**? (skill may be hurting)
 - Is it **highly variable**? (flaky assertion or non-deterministic behavior)
+
+Report run counts and counterexamples with these patterns.
+An assertion that both configurations pass can still be an acceptance check.
+Do not recommend removing it merely because it shows no difference.
 
 ### Step 3: Analyze Cross-Eval Patterns
 
@@ -176,6 +180,11 @@ Look at time_seconds, tokens, tool_calls:
 - Does the skill significantly increase execution time?
 - Is there high variance in resource usage?
 - Are there outlier runs that skew the aggregates?
+
+Check whether configurations have matching tasks and usable run counts.
+The aggregator compares configuration means, not matched-pair differences.
+Disclose missing data and uneven comparisons before interpreting a delta.
+Do not infer causation from one preferred output or a small sample.
 
 ### Step 5: Generate Notes
 
@@ -215,6 +224,7 @@ manually.
 - Report what you observe in the data
 - Be specific about which evals, assertions, or runs you're referring to
 - Note patterns that aggregate metrics would hide
+- Distinguish selection results from confirmation on fresh tasks or queries
 - Provide context that helps interpret the numbers
 
 **DO NOT:**

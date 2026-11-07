@@ -1,7 +1,7 @@
 ---
 name: skill-creator
 description: |
-  Use this skill when creating, editing, testing, evaluating, or packaging an Agent Skill (`SKILL.md`) for any compatible agent or harness. Load it before you create or change any skill folder, because it bundles the spec validator, eval and benchmark runners, description optimizer, and packager. Use it to turn workflows into reusable skills, improve instructions or trigger descriptions, add scripts or references, compare a skill against a baseline, validate against the Agent Skills standard, or package a skill. Trigger even when the user does not say "Agent Skill" but wants to package a repeatable workflow for on-demand use or asks why a skill does not activate. Do not use it for standalone prompt writing, custom instructions such as `AGENTS.md`, custom agents, or MCP servers unless the user wants the result built as a skill. Do not use it to write CI pipelines or GitHub Actions workflows, even ones that run skill evals.
+  Use this skill when creating, editing, testing, evaluating, or packaging an Agent Skill (`SKILL.md`) for any compatible agent or harness. Use it to turn workflows into reusable skills, improve instructions or trigger descriptions, add scripts or references, compare a skill against a baseline, or check compatibility with the Agent Skills standard. Trigger even when the user does not say "Agent Skill" but wants to package a repeatable workflow for on-demand use or asks why a skill does not activate. Do not use it for standalone prompt writing, custom instructions such as `AGENTS.md`, custom agents, or MCP servers unless the user wants the result built as a skill. Do not use it to write CI pipelines or GitHub Actions workflows, even ones that run skill evals.
 license: MIT
 compatibility: Requires Python 3.13+ for bundled scripts. Automated trigger evaluation and description optimization currently use the authenticated GitHub Copilot CLI with network access; this is an optional evaluation backend, not a requirement of generated skills.
 ---
@@ -12,21 +12,26 @@ Use this skill to create and improve portable Agent Skills that follow the
 Agent Skills format. The main loop is:
 
 1. Find out what the skill must do and roughly how.
-2. Write a draft of the skill.
-3. Run the skill in the intended agent or harness on realistic test prompts.
+2. Agree on testing. For behavioral tests, observe a baseline before drafting.
+3. Write the smallest useful draft and test it in the intended agent or harness.
 4. Help the user review the results, both by reading the outputs and with
    benchmark numbers.
 5. Change the skill based on the feedback. Repeat until the user is satisfied.
-6. Optionally, optimize the description so that the skill triggers reliably.
+6. Offer relevant deeper tests, description optimization, and delivery choices.
 
 Generated skills follow the Agent Skills format and should be client-neutral by
 default. Add client-specific frontmatter, installation paths, tools or commands
 only when the user targets that client or its compatibility requires them.
 
 Find out where the user is in this loop and continue from there. If they have
-only an idea, help them define it and write a draft. If they already have a
+only an idea, help them define it and choose an evidence path. If they already have a
 draft, go to testing. If they say they do not want formal evals, work
 informally with them. The order is flexible.
+
+Behavioral testing means observing an agent execute tasks, not checking the
+document's wording. Recommend baseline-first authoring, but honor draft-only
+or informal review requests. Do not delete an existing draft because it
+predates a test.
 
 Match the user's level of expertise. Briefly explain evaluation terms that may
 be new to them. For the review tools, describe app-specific behavior, such as
@@ -45,11 +50,9 @@ user to fill the gaps and confirm before you continue. Find out:
    to cross-client Agent Skills compatibility unless the user says otherwise.
 2. When the skill must trigger: which user phrases and contexts.
 3. What output format is expected.
-4. Whether to set up test cases. Skills with outputs that can be checked
-   objectively (file conversions, data extraction, code generation, fixed
-   workflows) benefit from test cases. Skills with subjective outputs (writing
-   style, art) often do not. Suggest a default for the skill type, and let the
-   user decide.
+4. Which evidence path to use. Recommend tests that fit the skill type, and
+   let the user choose. Subjective outputs can use human review or blind
+   comparisons instead of forced pass/fail assertions.
 
 Start from real expertise, not general knowledge. A skill built only from what
 the model already knows gives vague advice. Ask for project material: runbooks,
@@ -63,6 +66,57 @@ criteria and dependencies before you write test prompts. If MCP servers or
 subagents are available, use them to research documentation, similar skills
 and best practices, in parallel where possible. Bring this context to the
 conversation so the user has less to explain.
+
+### Choose the evidence path
+
+Read `references/testing-skills.md` when planning behavioral tests or
+diagnosing instruction failures. Recommend one path and ask for the user's
+choice. Do not present every optional experiment at the start.
+
+- Baseline-first: Agree on prompts and criteria, observe an independent
+  baseline, draft from the observed gaps, then run the candidate and baseline.
+- Informal review: Draft and review examples with the user. Label any
+  same-context checks as sanity checks, not independent comparisons.
+- Draft-only: Write and validate the skill. State that its behavior is untested.
+
+For new skills, use no skill as the baseline. For existing skills, keep an
+unchanged version for comparison before editing. Prior transcripts can guide
+the draft, but do not turn unmatched past runs into a comparative score.
+If the baseline already succeeds, retain that evidence. Find other agreed
+gaps or describe the skill's convenience without claiming an improvement.
+
+### Write test cases
+
+Agree with the user to include task evals before adding them. A request to
+draft or edit a skill does not by itself authorize test files. Show proposed
+prompts and expected outcomes before saving or running them. Include the
+host, model, number of runs, and known quota or cost implications in the plan.
+Reuse an approved plan unless the task, criteria, or run budget changes.
+
+Start with 2 or 3 realistic prompts, including an edge case. Match them to
+the skill type using `references/testing-skills.md`. After approval, save
+them to `evals/evals.json`:
+
+```json
+{
+  "skill_name": "example-skill",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "User's task prompt",
+      "expected_output": "Description of expected result",
+      "files": [],
+      "assertions": []
+    }
+  ]
+}
+```
+
+Draft assertions before inspecting outputs. They can start empty while you
+agree on the prompts, but freeze them before reviewing either configuration.
+See `references/schemas.md` for the format. These task evals are separate
+from trigger queries. If behavioral tests were selected, run the initial
+baseline using `references/running-evals.md` before writing the candidate.
 
 ### Write the SKILL.md
 
@@ -84,6 +138,10 @@ loading and the writing style guide. The essentials:
   `references/` and say in SKILL.md exactly when to read each file.
 - Add what the agent lacks and omit what it knows. Include a **Gotchas**
   section in SKILL.md and a checklist for multi-step workflows.
+- Match the guidance to the observed failure. Use an output recipe for
+  wrong-shaped results, required fields for omissions, and explicit
+  conditions for branching. Use rule-skipping counters only for observed
+  discipline failures. See `references/writing-skills.md`.
 - Read `references/scripts.md` before you write or change a bundled script.
 
 After you write or change a skill, validate it and fix every error and
@@ -93,47 +151,17 @@ warning:
 python scripts/quick_validate.py "<path-to-skill>"
 ```
 
-### Write test cases
-
-Agree with the user to include task evals before adding them. A request to
-draft or edit a skill does not by itself authorize test files. Show proposed
-prompts in the conversation and wait for approval before saving or running
-them, so the user can correct the test scope before it becomes a fixture.
-
-Write 2 or 3 realistic test prompts: the kind of thing a real user would say.
-Vary the phrasing, the level of detail and the formality. Include at least one
-edge case, such as a malformed input or an unusual request.
-Show them to the user, for example: "Here are a few test cases I'd like to
-try. Do these look right, or do you want to add more?" After approval, save them to
-`evals/evals.json`:
-
-```json
-{
-  "skill_name": "example-skill",
-  "evals": [
-    {
-      "id": 1,
-      "prompt": "User's task prompt",
-      "expected_output": "Description of expected result",
-      "files": [],
-      "assertions": []
-    }
-  ]
-}
-```
-
-Leave `assertions` empty for now. You write them while the first runs are in
-progress. See `references/schemas.md` for the full format. These task evals are
-not the same as the trigger queries for description optimization.
-
 ## Run and review the evals
+
+Use this section for selected behavioral tests. For draft-only or informal
+review, follow the agreed path without creating benchmark results.
 
 Read `references/running-evals.md` before you run the test cases. It contains
 the workspace layout, the run instructions, grading, the benchmark commands
 and the review viewer. In short:
 
 1. Start a with-skill run and a baseline run for each test case.
-2. While they run, write the assertions.
+2. While they run, write and freeze the assertions before inspecting outputs.
 3. Save the time and token data for each run.
 4. Grade each run with `agents/grader.md`, aggregate with
    `scripts/aggregate_benchmark.py`, do an analyst pass and build the viewer
@@ -142,7 +170,7 @@ and the review viewer. In short:
    Open a browser only if the user says yes.
 6. When the user is done, read `feedback.json`.
 
-The bundled automated eval and trigger scripts currently use Copilot CLI.
+The bundled trigger-evaluation and description-optimization scripts use Copilot CLI.
 Treat their scores as evidence about that evaluation host only, not as proof
 that every compatible agent will trigger or follow the skill the same way.
 For another target host, use its activation and execution tools for paired
@@ -166,7 +194,9 @@ Build the review file before you change the skill based on the test results.
    script or follow the same steps, put a script in `scripts/` and tell the
    skill to use it. Follow `references/scripts.md`.
 
-Then:
+For selected evals, repeat the iteration steps below.
+For informal review, revise and validate the draft with the user's feedback
+without claiming an independent comparison.
 
 1. Apply the changes and run `scripts/quick_validate.py`.
 2. Run all test cases again, including the baselines, into
@@ -177,20 +207,39 @@ Then:
    iteration, and ask the user before you open it.
 4. Wait for the user's review, read the feedback and repeat.
 
-Stop when the user is satisfied, when all feedback is empty, or when the
-changes no longer make progress.
+Keep successful test cases when revising the skill. Test new tasks before
+claiming that a fix generalizes. If the agent missed a reference, fix its
+placement or reading cue before adding more rules.
+
+Stop at the agreed criteria or run budget, when the user stops, or when
+changes no longer make progress. Blank feedback is not proof of reliability.
+
+### Deeper evaluation (optional)
+
+Offer the next useful experiment when evidence calls for it. Use
+`references/testing-skills.md` for wording micro-tests, pressure scenarios,
+test-quality checks, and fresh confirmation tasks. Explain the planned runs
+and ask before expanding the agreed budget. A request to edit a skill does
+not authorize a model-backed experiment.
+
+If an experimental draft obstructs a fresh approach, offer to replace or
+rewrite that draft. Agree on the files and whether to retain a copy first.
+Do not apply a universal delete-and-restart rule.
 
 ### Blind comparison (optional)
 
 To find out whether a new version is really better, give the outputs of two
 versions to an independent agent that does not know which is which. Read
 `agents/comparator.md` and `agents/analyzer.md` for the procedure. If the
-comparator declares a tie, record it and skip the winner and loser analysis.
-This needs subagents. The human review loop is usually enough.
+comparator declares a tie or insufficient evidence, record that result and
+skip winner and loser analysis. Keep source labels hidden, agree on the
+rubric before examining outputs, and allow a real tie. This needs independent
+contexts or reviewers. The human review loop is usually enough.
 
 ## Optimize the description
 
-After you create or improve a skill, offer to optimize its description. Read
+If discovery is uncertain or the user wants a measured trigger score, offer
+to optimize the description. Read
 `references/description-optimization.md` for the full procedure. In short:
 write about 20 trigger queries with near-misses, review them with the user,
 run `scripts/run_loop.py`, apply `best_description`, validate and check the
@@ -201,6 +250,9 @@ result with 5 to 10 new queries.
 Read `references/host-adaptations.md` when you deliver or package the skill,
 or when the host cannot run part of this workflow (no subagents, no browser,
 no Copilot CLI or no Python).
+Offer local delivery, packaging, installation, or publishing at this stage.
+Execute only the user's selected actions and destinations. Testing does not
+authorize a commit, push, release, or pull request.
 
 ## Gotchas
 
@@ -222,18 +274,23 @@ no Copilot CLI or no Python).
   it to pick the best attempt. Use new queries for an independent score.
 - Do not invent time or token values. Leave out values that the host does not
   report.
+- Skill activation, successful execution, and rule-following are different
+  outcomes. Test the one that the user needs.
 
 ## Checklist
 
 - [ ] Intent, triggers, output format and test approach agreed with the user
+- [ ] Baseline behavior captured before drafting, if behavioral tests selected
 - [ ] SKILL.md written; `quick_validate` passes
-- [ ] Test prompts saved in `evals/evals.json`
-- [ ] With-skill and baseline runs complete; assertions written
-- [ ] Runs graded, benchmark aggregated, analyst notes added
-- [ ] Viewer built; user asked before a browser opens; feedback read
-- [ ] Skill improved and tested again until the user is satisfied
+- [ ] Approved test prompts saved and criteria frozen, if tests selected
+- [ ] Candidate and baseline runs compared, with preserved regression cases
+- [ ] Selected grading, benchmark and human review steps complete
+- [ ] Skill revised and evaluated to the agreed stopping point
 - [ ] Description optimized and checked with new queries (if wanted)
-- [ ] Skill delivered or packaged
+- [ ] Selected delivery or publishing actions complete
+
+Mark unselected steps as not applicable. Record untested behavior instead of
+forcing the user through every evaluation option.
 
 ## Available scripts
 
@@ -256,6 +313,8 @@ The paths are relative to this skill's directory. Each script needs Python
 
 - `references/writing-skills.md`: frontmatter rules, descriptions, staged
   loading and writing style.
+- `references/testing-skills.md`: baseline-first authoring, tests by skill
+  type, wording experiments, pressure tests, and evidence limits.
 - `references/running-evals.md`: running, grading, benchmark and viewer.
 - `references/description-optimization.md`: trigger queries and the
   optimization loop.

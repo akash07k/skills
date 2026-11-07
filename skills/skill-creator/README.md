@@ -238,5 +238,37 @@ Copilot or send evaluation content to model services. Packaged skills exclude
 the development-only root directories `evals/`, `tests/`,
 `skill-creator-results/` (from older versions), `logs/`, `test-results/`, and `playwright-report/`;
 `*-workspace/`, `__pycache__/`, `node_modules/`, and `.venv/` directories
-(compared case-insensitively); dotfiles such as `.env`; symlinks and
-junctions inside the skill; and `.log`, `.pyc`, and existing `.skill` files.
+(compared case-insensitively); dotfiles such as `.env`; and `.log`, `.pyc`,
+and existing `.skill` files.
+
+These tools operate on trusted local skill and eval folders. They read linked
+files and folders normally; they do not enforce a filesystem sandbox.
+Temporary eval profiles and workspaces isolate measurements from installed
+skills and previous context, not from the filesystem.
+
+## Adapted authoring methods
+
+The authoring and evaluation guidance adapts methods from
+[Superpowers](https://github.com/obra/superpowers/tree/22f0b46), source revision
+`22f0b46` (v7.0.2). The source scope includes the `writing-skills` bundle,
+its linked TDD and test-quality guidance, and host adaptation references.
+The adapted instructions are self-contained. Superpowers is not a runtime
+dependency, and its mandatory deletion or publishing rules do not apply.
+
+| Source material | Adaptation in skill-creator |
+| --- | --- |
+| `writing-skills/SKILL.md` | Baseline-first recommendation, tests by skill type, failure-matched guidance, concise examples |
+| `references/discovery.md` | Trigger-focused descriptions, searchable vocabulary, staged reading, descriptive names |
+| `references/testing-skills-with-subagents.md` and `references/bulletproofing.md` | Optional pressure tests, observed workaround counters, follow-up diagnosis, fresh retests |
+| `references/CLAUDE_MD_TESTING.md` | No-guidance controls and comparable instruction variants, without treating predicted results as observations |
+| `references/persuasion-principles.md` | Clear requirements, reasons, commitments, and sequencing, without fabricated authority or compliance guarantees |
+| `references/anthropic-best-practices.md` | Expert material, independent author and executor contexts, navigation observations, artifact inspection, reusable tools |
+| `references/flowcharts.md`, `references/graphviz-conventions.dot`, and `render-graphs.js` | Small decision diagrams and rendering when needed, without another bundled renderer |
+| `test-driven-development/SKILL.md` and `writing-good-tests.md` | Expected failures, minimal fixes, preserved regression cases, independent expectations, real behavior and mutation checks |
+| `using-superpowers/SKILL.md` and host references | Check actual activation tools, context inheritance, model availability, and lifecycle controls |
+
+Use `references/testing-skills.md` for optional experimental methods and
+`references/host-adaptations.md` for draft replacement and publishing choices.
+Sample counts and observed effects in source material do not establish
+universal reliability. Evaluate the relevant behavior in the user's target
+host and model before making effectiveness claims.

@@ -368,7 +368,10 @@ class _FrontmatterParser:
                     code = text[position + 2:position + 2 + digits]
                     if len(code) != digits or not re.fullmatch(r"[0-9a-fA-F]+", code):
                         raise self.error(f"invalid \\{escape} escape in double-quoted value", index)
-                    out.append(chr(int(code, 16)))
+                    codepoint = int(code, 16)
+                    if codepoint > 0x10FFFF or 0xD800 <= codepoint <= 0xDFFF:
+                        raise self.error(f"invalid Unicode code point in \\{escape}{code}", index)
+                    out.append(chr(codepoint))
                     position += 2 + digits
                     continue
                 if escape and escape in _DOUBLE_QUOTE_ESCAPES:
@@ -590,7 +593,10 @@ class _FrontmatterParser:
                 code = segment[position + 2:position + 2 + digits]
                 if len(code) != digits or not re.fullmatch(r"[0-9a-fA-F]+", code):
                     raise self.error(f"invalid \\{escape} escape in double-quoted value", cursor)
-                out.append(chr(int(code, 16)))
+                codepoint = int(code, 16)
+                if codepoint > 0x10FFFF or 0xD800 <= codepoint <= 0xDFFF:
+                    raise self.error(f"invalid Unicode code point in \\{escape}{code}", cursor)
+                out.append(chr(codepoint))
                 position += 2 + digits
             elif escape in _DOUBLE_QUOTE_ESCAPES:
                 out.append(_DOUBLE_QUOTE_ESCAPES[escape])

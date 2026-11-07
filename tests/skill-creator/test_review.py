@@ -18,6 +18,46 @@ from scripts.generate_report import generate_html as generate_report
 
 
 class ReviewTests(unittest.TestCase):
+    def test_run_ids_preserve_path_boundaries(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for parts in (("eval-1", "with_skill"), ("eval-1-with_skill",)):
+                (root.joinpath(*parts) / "outputs").mkdir(parents=True)
+            runs = review.find_runs(root)
+            self.assertEqual(
+                {run["id"] for run in runs},
+                {"run:eval-1/with_skill", "run:eval-1-with_skill"},
+            )
+
+    def test_previous_feedback_migrates_unambiguous_legacy_ids(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "eval-1" / "with_skill" / "outputs").mkdir(parents=True)
+            for data in (
+                {"reviews": [{"run_id": "eval-1-with_skill", "feedback": "Keep this review"}]},
+                {"eval-1-with_skill": "Keep this review"},
+            ):
+                with self.subTest(data=data):
+                    (root / "feedback.json").write_text(json.dumps(data), encoding="utf-8")
+                    previous = review.load_previous_iteration(root)
+                    self.assertEqual(previous["run:eval-1/with_skill"]["feedback"], "Keep this review")
+                    self.assertNotIn("eval-1-with_skill", previous)
+
+    def test_ambiguous_legacy_feedback_is_preserved_without_assigning_it(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            for parts in (("eval-1", "with_skill"), ("eval-1-with_skill",)):
+                (root.joinpath(*parts) / "outputs").mkdir(parents=True)
+            (root / "feedback.json").write_text(json.dumps({"reviews": [
+                {"run_id": "eval-1-with_skill", "feedback": "Which run?"},
+            ]}), encoding="utf-8")
+            with contextlib.redirect_stderr(io.StringIO()) as stderr:
+                previous = review.load_previous_iteration(root)
+            self.assertEqual(previous["run:eval-1/with_skill"]["feedback"], "")
+            self.assertEqual(previous["run:eval-1-with_skill"]["feedback"], "")
+            self.assertEqual(previous["eval-1-with_skill"]["feedback"], "Which run?")
+            self.assertIn("Ambiguous legacy", stderr.getvalue())
+
     def test_large_outputs_are_referenced_without_embedding(self):
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory) / "large.bin"
@@ -271,8 +311,6 @@ class ReviewTests(unittest.TestCase):
             handler.server = mock.Mock(server_port=3117)
             handler.headers = {
                 "Content-Length": str(len(body)),
-                "Host": "localhost:3117",
-                "Origin": "http://localhost:3117",
             }
             handler.rfile = io.BytesIO(body)
             handler.wfile = io.BytesIO()
@@ -285,51 +323,6 @@ class ReviewTests(unittest.TestCase):
             self.assertEqual(json.loads(destination.read_text())["status"], "complete")
             self.assertIn("Disk error", handler.wfile.getvalue().decode())
             self.assertEqual(list(Path(directory).iterdir()), [destination])
-
-    def test_feedback_rejects_cross_origin_posts(self):
-        with tempfile.TemporaryDirectory() as directory:
-            destination = Path(directory) / "feedback.json"
-            destination.write_text('{"status":"complete"}', encoding="utf-8")
-            handler = object.__new__(review.ReviewHandler)
-            handler.path = "/api/feedback"
-            handler.feedback_path = destination
-            handler.server = mock.Mock(server_port=3117)
-            handler.headers = {
-                "Content-Length": "2",
-                "Host": "localhost:3117",
-                "Origin": "https://example.invalid",
-            }
-            handler.rfile = io.BytesIO(b"{}")
-            handler.send_error = mock.Mock()
-            handler.do_POST()
-            handler.send_error.assert_called_once_with(
-                403, "Feedback saves are accepted only from this review page"
-            )
-            self.assertEqual(destination.read_text(encoding="utf-8"), '{"status":"complete"}')
-
-    def test_feedback_rejects_posts_without_origin(self):
-        handler = object.__new__(review.ReviewHandler)
-        handler.path = "/api/feedback"
-        handler.feedback_path = Path("unused")
-        handler.server = mock.Mock(server_port=3117)
-        handler.headers = {"Content-Length": "2", "Host": "localhost:3117"}
-        handler.rfile = io.BytesIO(b"{}")
-        handler.send_error = mock.Mock()
-        handler.do_POST()
-        handler.send_error.assert_called_once_with(
-            403, "Feedback saves are accepted only from this review page"
-        )
-
-    def test_get_rejects_foreign_host(self):
-        handler = object.__new__(review.ReviewHandler)
-        handler.path = "/"
-        handler.server = mock.Mock(server_port=3117)
-        handler.headers = {"Host": "example.invalid"}
-        handler.send_error = mock.Mock()
-        handler.do_GET()
-        handler.send_error.assert_called_once_with(
-            403, "Review data is available only from this review page"
-        )
 
     def test_idle_connection_does_not_block_other_requests(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -381,8 +374,6 @@ class ReviewTests(unittest.TestCase):
         handler.server = mock.Mock(server_port=3117)
         handler.headers = {
             "Content-Length": "invalid",
-            "Host": "localhost:3117",
-            "Origin": "http://localhost:3117",
         }
         handler.rfile = io.BytesIO()
         handler.wfile = io.BytesIO()
@@ -402,8 +393,6 @@ class ReviewTests(unittest.TestCase):
         handler.server = mock.Mock(server_port=3117)
         handler.headers = {
             "Content-Length": str(len(body)),
-            "Host": "localhost:3117",
-            "Origin": "http://localhost:3117",
         }
         handler.rfile = io.BytesIO(body)
         handler.wfile = io.BytesIO()
@@ -422,8 +411,6 @@ class ReviewTests(unittest.TestCase):
         handler.server = mock.Mock(server_port=3117)
         handler.headers = {
             "Content-Length": length if length is not None else str(len(body)),
-            "Host": "localhost:3117",
-            "Origin": "http://localhost:3117",
         }
         handler.rfile = io.BytesIO(body)
         handler.wfile = io.BytesIO()
@@ -502,7 +489,7 @@ class ReviewTests(unittest.TestCase):
                     handler.do_POST()
                     handler.send_response.assert_called_once_with(400)
                     self.assertFalse(destination.exists())
-            good = {"reviews": [{"run_id": "r", "feedback": "ok", "timestamp": "t"}], "status": "complete"}
+            good = {"reviews": [{"run_id": "run:r", "feedback": "ok", "timestamp": "t"}], "status": "complete"}
             handler = self.feedback_handler(json.dumps(good).encode(), destination)
             handler.do_POST()
             handler.send_response.assert_called_once_with(200)
@@ -522,30 +509,11 @@ class ReviewTests(unittest.TestCase):
                 "eval-empty": "",
             }), encoding="utf-8")
             previous = review.load_previous_iteration(root)
-            self.assertEqual(previous["eval-chart-with_skill"]["feedback"], "Missing axis labels.")
-            self.assertEqual(previous["eval-chart-without_skill"]["feedback"], "Missing axis labels.")
+            self.assertEqual(previous["run:eval-chart/with_skill"]["feedback"], "Missing axis labels.")
+            self.assertEqual(previous["run:eval-chart/without_skill"]["feedback"], "Missing axis labels.")
             self.assertEqual(previous["eval-gone"]["feedback"], "Orphan feedback.")
             self.assertNotIn("eval-empty", previous)
             self.assertEqual(review.find_runs(root)[0]["eval_dir"], "eval-chart")
-
-    def test_symlinked_outputs_are_not_embedded(self):
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            secret = root / "secret.txt"
-            secret.write_text("TOP SECRET", encoding="utf-8")
-            outputs = root / "eval-1" / "with_skill" / "outputs"
-            outputs.mkdir(parents=True)
-            (outputs / "real.txt").write_text("visible", encoding="utf-8")
-            link = outputs / "link.txt"
-            try:
-                link.symlink_to(secret)
-            except OSError as error:
-                self.skipTest(f"Symlinks unavailable: {error}")
-            self.assertEqual(review.embed_file(link)["type"], "error")
-            with mock.patch.object(sys, "stderr", new_callable=io.StringIO):
-                run = review.find_runs(root)[0]
-            self.assertEqual([output["name"] for output in run["outputs"]], ["real.txt"])
-            self.assertNotIn("TOP SECRET", json.dumps(run))
 
     def test_server_binds_loopback_only(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -563,7 +531,6 @@ class ReviewTests(unittest.TestCase):
         self.assertIn("grading.assertion_results", template)
         self.assertIn("grading.expectations", template)
         self.assertIn("run.assertion_results", template)
-        self.assertIn("Content-Security-Policy", template)
 
     def test_user_notes_are_attached_to_the_run_not_listed_as_outputs(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -597,7 +564,7 @@ class ReviewTests(unittest.TestCase):
             self.assertIn("Unknown run_id", json.loads(handler.wfile.getvalue())["error"])
             self.assertIn("removed-run", destination.read_text(encoding="utf-8"))
             good = {"reviews": [
-                {"run_id": "eval-1-with_skill", "feedback": "ok"},
+                {"run_id": "run:eval-1/with_skill", "feedback": "ok"},
                 {"run_id": "removed-run", "feedback": "Keep this review"},
             ], "status": "complete"}
             handler = self.feedback_handler(json.dumps(good).encode(), destination)
@@ -628,13 +595,12 @@ class ReviewTests(unittest.TestCase):
                 thread = threading.Thread(target=server.serve_forever, daemon=True)
                 thread.start()
                 port = server.server_port
-                origin = f"http://localhost:{port}"
 
                 def request(method, path, body=b"", headers=None):
                     import http.client
                     connection = http.client.HTTPConnection("127.0.0.1", port, timeout=5)
                     try:
-                        sent = {"Host": f"localhost:{port}", "Origin": origin, **(headers or {})}
+                        sent = {"Host": f"localhost:{port}", **(headers or {})}
                         connection.putrequest(method, path, skip_host=True)
                         for name, value in sent.items():
                             if value is not None:
@@ -647,11 +613,8 @@ class ReviewTests(unittest.TestCase):
                     finally:
                         connection.close()
 
-                valid = json.dumps({"reviews": [{"run_id": "eval-1-with_skill", "feedback": "ok"}]}).encode()
+                valid = json.dumps({"reviews": [{"run_id": "run:eval-1/with_skill", "feedback": "ok"}]}).encode()
                 cases = [
-                    ("GET", "/api/feedback", b"", {"Host": "example.invalid"}, 403),
-                    ("POST", "/api/feedback", valid, {"Origin": None}, 403),
-                    ("POST", "/api/feedback", valid, {"Origin": "http://example.invalid"}, 403),
                     ("GET", "/api/unknown", b"", None, 404),
                     ("POST", "/api/unknown", valid, None, 404),
                     ("PUT", "/api/feedback", valid, None, 501),

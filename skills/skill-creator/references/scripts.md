@@ -82,6 +82,9 @@ reader.
   possible, and fail with a clear error.
 - **Add `--dry-run`** for destructive or stateful actions, so that the agent
   can preview the result first.
+- **Preserve failure meaning.** A missing required input is not an empty
+  successful result. Report the error instead of inventing defaults.
+  Handle known recovery cases explicitly and state any reduced output.
 - **Use meaningful exit codes.** Use different codes for different failures,
   for example invalid arguments, not found and authentication failure. List
   them in `--help`.
@@ -92,6 +95,21 @@ reader.
   a limited number of items by default, and add flags such as `--offset` or
   `--limit` for more. When the output is large and cannot be paged, require an
   `--output` flag with a file path, or `-` for stdout.
+- **Explain consequential constants.** State the reason for a timeout,
+  retry count, or limit. Do not add configuration switches without a task need.
+
+Use an interpreter in runnable examples, such as `python scripts/tool.py`
+or `node scripts/tool.js`. Do not depend on executable bits surviving a
+client's packaging process. Distinguish "run this script" from "read this
+script as a reference".
+
+If a skill uses MCP tools, discover the names and schemas exposed by the
+target host. Use those actual qualified names. Do not assume that a
+`server:tool` spelling or a tool name from another client is accepted.
+
+For batch changes with a structured intermediate result, validate that
+result before applying it when an existing checker can catch wrong fields
+or values. Do not add a planning framework for a simple operation.
 
 ## List the scripts in SKILL.md
 

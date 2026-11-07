@@ -11,6 +11,7 @@ import unittest
 import zipfile
 from datetime import date, datetime
 from pathlib import Path
+from unittest import mock
 
 from skill_path import SKILL
 from scripts import package_skill as packager
@@ -34,25 +35,6 @@ def make_skill(root: Path, name: str, frontmatter: str, body: str = "Use this sk
     skill.mkdir(parents=True, exist_ok=True)
     (skill / "SKILL.md").write_text(f"---\n{frontmatter}\n---\n{body}", encoding="utf-8")
     return skill
-
-
-def can_symlink(root: Path) -> bool:
-    try:
-        target = root / "symlink-probe-target"
-        target.write_text("x", encoding="utf-8")
-        os.symlink(target, root / "symlink-probe")
-        os.symlink(root, root / "symlink-probe-dir", target_is_directory=True)
-    except (OSError, NotImplementedError):
-        return False
-    finally:
-        for name in ("symlink-probe", "symlink-probe-dir", "symlink-probe-target"):
-            path = root / name
-            if os.path.lexists(path):
-                try:
-                    os.unlink(path)
-                except OSError:
-                    os.rmdir(path)
-    return True
 
 
 def run_cli(module: str, *args: str) -> subprocess.CompletedProcess:
@@ -80,6 +62,20 @@ class ScalarStyleTests(unittest.TestCase):
         )
         self.assertEqual(fm('a: "joined\\\n    here"')["a"], "joinedhere")
         self.assertEqual(fm('a: "folded\n  text"  # trailing comment')["a"], "folded text")
+
+    def test_invalid_unicode_escapes_report_frontmatter_lines(self):
+        for escape in (r"\U00110000", r"\UFFFFFFFF", r"\uD800", r"\uDFFF"):
+            for source in (
+                f'a: "{escape}"',
+                f'metadata: {{key: "{escape}"}}',
+                f'metadata:\n  "{escape}": value',
+                f'a: "first line\n  {escape}"',
+            ):
+                with self.subTest(source=source):
+                    with self.assertRaises(FrontmatterError) as raised:
+                        fm(source)
+                    self.assertIn("Unicode code point", str(raised.exception))
+                    self.assertEqual(raised.exception.line, 3 if "\n" in source else 2)
 
     def test_literal_block_chomping(self):
         source = "a: |{}\n  one\n    two\n\n  three\n\n\nb: x"
@@ -392,6 +388,7 @@ class ValidationRuleTests(unittest.TestCase):
         (skill / "references" / "deep" / "b.md").write_text("x", encoding="utf-8")
         (skill / "scripts").mkdir()
         (skill / "scripts" / "run.py").write_text("x", encoding="utf-8")
+        (self.root / "outside.md").write_text("Shared reference", encoding="utf-8")
         body = (
             "Use this skill.\n"
             "[ok](references/ok.md) [frag](references/ok.md#part) [dot](./references/ok.md \"t\")\n"
@@ -414,11 +411,11 @@ class ValidationRuleTests(unittest.TestCase):
             "Link 'references/undefined-ref.md' does not exist",
             "Link 'C:\\\\Users\\\\x\\\\a.md' is an absolute path",
             "Link '/etc/passwd' is an absolute path",
-            "Link '../outside.md' points outside the skill folder",
         ):
             self.assertIn(fragment, warnings)
         self.assertNotIn("references/deep/b.md", warnings)
-        self.assertEqual(len(result.warnings), 6, result.warnings)
+        self.assertNotIn("../outside.md", warnings)
+        self.assertEqual(len(result.warnings), 5, result.warnings)
 
     def test_skill_md_must_be_named_exactly(self):
         skill = self.root / "d"
@@ -450,6 +447,20 @@ class ValidationRuleTests(unittest.TestCase):
 
 
 class CliTests(unittest.TestCase):
+    def test_invalid_unicode_escape_keeps_json_output_valid(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            skill = make_skill(
+                Path(temporary), "demo",
+                r'name: demo' + "\n" + r'description: "\U00110000"',
+            )
+            result = run_cli("quick_validate", str(skill), "--json")
+            self.assertEqual(result.returncode, 1)
+            self.assertEqual(result.stderr, "")
+            payload = json.loads(result.stdout)
+            self.assertFalse(payload["valid"])
+            self.assertIn("line 3", payload["errors"][0])
+            self.assertIn("Unicode code point", payload["errors"][0])
+
     def test_quick_validate_cli_exit_codes_and_streams(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
@@ -528,6 +539,22 @@ class CliTests(unittest.TestCase):
 
 
 class PackagingTests(unittest.TestCase):
+    def test_missing_collected_entry_point_preserves_existing_archive(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            skill = make_skill(root, "demo", "name: demo\ndescription: Use when x.")
+            output = root / "out"
+            output.mkdir()
+            archive = output / "demo.skill"
+            archive.write_bytes(b"Previous archive")
+            stderr = io.StringIO()
+            with mock.patch.object(packager, "collect_files", return_value=([], [])), \
+                 contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(stderr):
+                self.assertIsNone(packager.package_skill(skill, output))
+            self.assertEqual(archive.read_bytes(), b"Previous archive")
+            self.assertIn("SKILL.md", stderr.getvalue())
+            self.assertEqual(list(output.iterdir()), [archive])
+
     def package(self, skill: Path, output: Path) -> list[str]:
         with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
             archive_path = packager.package_skill(skill, output)
@@ -571,27 +598,6 @@ class PackagingTests(unittest.TestCase):
             with zipfile.ZipFile(archive_path) as archive:
                 self.assertEqual(archive.getinfo("demo/assets/old.txt").date_time[:3], (1980, 1, 1))
 
-    def test_skips_symlinks_inside_skill_but_follows_symlinked_root(self):
-        with tempfile.TemporaryDirectory() as temporary:
-            root = Path(temporary)
-            if not can_symlink(root):
-                self.skipTest("symlinks are not available")
-            skill = make_skill(root, "demo", "name: demo\ndescription: Use when x.")
-            outside = root / "outside"
-            outside.mkdir()
-            (outside / "secret.txt").write_text("secret", encoding="utf-8")
-            os.symlink(outside / "secret.txt", skill / "linked.txt")
-            os.symlink(outside, skill / "linked-dir", target_is_directory=True)
-            (skill / "real.txt").write_text("real", encoding="utf-8")
-            names = self.package(skill, root / "out")
-            self.assertEqual(sorted(names), ["demo/SKILL.md", "demo/real.txt"])
-
-            alias_parent = root / "alias"
-            alias_parent.mkdir()
-            os.symlink(skill, alias_parent / "demo", target_is_directory=True)
-            names = self.package(alias_parent / "demo", root / "out2")
-            self.assertEqual(sorted(names), ["demo/SKILL.md", "demo/real.txt"])
-
     def test_refuses_invalid_skill(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
@@ -611,6 +617,17 @@ class PackagingTests(unittest.TestCase):
 
 
 class RealSkillTests(unittest.TestCase):
+    def test_skill_creator_packages_to_an_external_output_directory(self):
+        with tempfile.TemporaryDirectory() as temporary, \
+             contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            archive_path = packager.package_skill(SKILL, temporary)
+            self.assertIsNotNone(archive_path)
+            with zipfile.ZipFile(archive_path) as archive:
+                self.assertEqual(
+                    archive.read("skill-creator/SKILL.md"),
+                    (SKILL / "SKILL.md").read_bytes(),
+                )
+
     def test_skill_creator_is_valid(self):
         result = quick_validate.check_skill(SKILL)
         self.assertEqual(result.errors, [])

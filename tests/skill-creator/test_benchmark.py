@@ -260,6 +260,32 @@ class BenchmarkTests(unittest.TestCase):
             benchmark = aggregate.generate_benchmark(self.root, "demo")
         self.assertEqual(benchmark["runs"][0]["result"]["pass_rate"], 0.5)
 
+    def test_fallback_pass_rate_must_be_a_fraction(self):
+        for rate in (-0.01, 1.01, 2.0, float("inf"), float("nan"), True, "0.5"):
+            with self.subTest(rate=rate), contextlib.redirect_stderr(io.StringIO()):
+                summary, reason = aggregate.resolve_summary(
+                    {"summary": {"pass_rate": rate}, "assertion_results": [{"text": "Missing verdict"}]},
+                    [], self.root / "grading.json", "Example",
+                )
+                self.assertIsNone(summary)
+                self.assertIn("no usable summary", reason)
+        for rate in (0, 1):
+            with self.subTest(rate=rate):
+                summary, reason = aggregate.resolve_summary(
+                    {"summary": {"pass_rate": rate}}, [], self.root / "grading.json", "Example",
+                )
+                self.assertEqual(summary["pass_rate"], rate)
+                self.assertEqual(reason, "")
+
+    def test_complete_assertions_override_out_of_range_pass_rate(self):
+        data = grading(0.3)
+        data["summary"]["pass_rate"] = 2.0
+        write_json(self.root / "eval-1" / "with_skill" / "grading.json", data)
+        with contextlib.redirect_stderr(io.StringIO()) as stderr:
+            benchmark = aggregate.generate_benchmark(self.root, "demo")
+        self.assertEqual(benchmark["runs"][0]["result"]["pass_rate"], 0.3)
+        self.assertIn("invalid summary.pass_rate", stderr.getvalue())
+
     def test_unusable_runs_are_listed_in_json_and_markdown(self):
         write_json(self.root / "eval-1" / "with_skill" / "grading.json", grading())
         write_json(self.root / "eval-1" / "without_skill" / "grading.json", {"assertion_results": []})

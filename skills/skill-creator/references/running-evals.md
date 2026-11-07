@@ -1,12 +1,13 @@
 # Running and reviewing task evals
 
 Read this file when you run a skill's test prompts, grade them, build the
-benchmark, or show the results to the user. Run the steps as one sequence and
-do not stop partway through.
+benchmark, or show the results to the user. Complete the selected comparison
+and review steps. An initial baseline is a separate authoring phase.
 
 ## Contents
 
 - [Prerequisites and workspace layout](#prerequisites-and-workspace-layout)
+- [Initial baseline before drafting](#initial-baseline-before-drafting)
 - [Step 1: Start paired runs](#step-1-start-paired-runs)
 - [Step 2: Draft assertions while runs are in progress](#step-2-draft-assertions-while-runs-are-in-progress)
 - [Step 3: Capture timing data](#step-3-capture-timing-data)
@@ -53,13 +54,34 @@ directory contains `eval_metadata.json`, it does not need the `eval-` prefix.
 Do not name a configuration `delta`. That name is reserved for the comparison
 in `benchmark.json`.
 
+## Initial baseline before drafting
+
+If the user selects baseline-first authoring, run the approved baseline
+before writing the candidate. Use `iteration-0/` for this initial evidence.
+For a new skill, use the no-skill baseline below. For an existing skill,
+keep an unchanged copy and run that version.
+
+Write the eval metadata and freeze the criteria before examining outputs.
+Save the transcript, outputs, and observed timing. Grade the initial run
+when useful, but do not invent a comparison without a candidate.
+Use the observed gaps to choose the guidance form in
+`references/writing-skills.md`. If no gap appears, record that result.
+
+After drafting, use a new iteration directory for candidate and baseline
+runs. Do not reuse a coached baseline or mix unmatched tasks into the score.
+Use `references/testing-skills.md` for tests by skill type and optional
+wording or pressure experiments.
+
 ## Step 1: Start paired runs
 
 If the host supports independent subagents, start the with-skill run and the
 baseline run for each test case at the same time. Use the same prompt, inputs
 and model for both runs, and keep their outputs in separate directories. Make
 sure that the baseline cannot find the candidate skill through its working
-directory or its installed skills. If parallel runs are not possible, run the
+directory or its installed skills. Use fresh executor contexts without
+the author's feedback or prior results. Keep evaluation criteria with the
+grader rather than adding answer hints to one configuration.
+If parallel runs are not possible, run the
 sessions one after another. For a host with only one agent, see
 `references/host-adaptations.md`.
 
@@ -112,14 +134,21 @@ iteration to the next.
 Use the time while the runs are in progress. Draft assertions for each test
 case and explain them to the user. If `evals/evals.json` already has
 assertions, review them and explain what each one checks.
+Freeze the assertions before inspecting either run's outputs, and use the
+same assertions for the skill and baseline runs. If later review shows that
+the criteria need to change, record the change and rerun both configurations
+with the revised criteria.
 
 A good assertion can be checked objectively, and its text says what it checks.
 The text appears in the benchmark viewer, so a reader must understand it
 without other context. Avoid brittle assertions that require an exact phrase,
 such as "the output says exactly 'Total Revenue: X'". A correct output with
-other wording would fail. Remove assertions that pass with and without the
-skill, because they do not measure the skill. For subjective qualities, such as writing style or
-design, use human review instead of assertions.
+other wording would fail. Keep acceptance and safety checks even when both
+the skill and baseline pass them. Mark these checks as non-discriminating:
+they confirm requirements but do not show an improvement in this comparison.
+Do not select or remove scoring criteria because of observed results. For
+subjective qualities, such as writing style or design, use human review
+instead of assertions.
 
 When the assertions are ready, put the string lists in the `assertions` field
 of `eval_metadata.json` and of `evals/evals.json`. These are the inputs. The
@@ -158,6 +187,10 @@ When all the runs are complete:
    field names. It still reads the older `expectations` field for old results.
    If a script can check an assertion, write and run the script. Scripts are
    faster, more reliable and you can use them again in later iterations.
+   Derive expected values independently and inspect actual artifacts.
+   If possible, use a grader that did not author the candidate.
+   Record missing evidence and weak-check suggestions without changing
+   the frozen criteria after seeing the result.
 
 2. **Aggregate the results.** Run:
 
@@ -260,8 +293,8 @@ When the user tells you they are done, read `feedback.json`:
 ```json
 {
   "reviews": [
-    {"run_id": "eval-1-chart-labels-with_skill-run-1", "feedback": "the chart is missing axis labels", "timestamp": "..."},
-    {"run_id": "eval-2-table-layout-with_skill-run-1", "feedback": "", "timestamp": "..."}
+    {"run_id": "run:eval-1-chart-labels/with_skill/run-1", "feedback": "the chart is missing axis labels", "timestamp": "..."},
+    {"run_id": "run:eval-2-table-layout/with_skill/run-1", "feedback": "", "timestamp": "..."}
   ],
   "status": "complete"
 }

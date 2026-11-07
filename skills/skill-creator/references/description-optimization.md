@@ -45,7 +45,16 @@ measure what the chosen evaluation host actually selects.
   match.
 - Keep it to a few sentences. The hard limit is 1024 characters.
 
+Keep workflow steps out of the description. A workflow summary can give the
+agent a shortcut instead of a reason to load the body. Use actual symptoms,
+user vocabulary, and near-miss boundaries. Put commands and procedures in
+the instructions, not in the trigger text.
+
 Do not trust a wording until the trigger queries confirm it.
+
+Test execution separately. A selected skill can still produce the wrong
+result or skip a required reference. Use `references/testing-skills.md`
+for those failures, not the trigger optimizer.
 
 Some boundaries do not move with wording. A request that names the skill's
 own domain often triggers it even when the description excludes that request.

@@ -9,6 +9,7 @@ from pathlib import Path
 
 from skill_path import SKILL
 from scripts import generate_review as review
+from scripts import aggregate_benchmark
 from scripts import prepare_eval_review
 from scripts.generate_report import generate_html as generate_report
 
@@ -146,6 +147,49 @@ def create_fixture(root: Path) -> None:
         review.generate_html(legacy_runs, "Legacy", benchmark=legacy_benchmark),
         encoding="utf-8",
     )
+    assertions = [
+        {"text": f"Check {index}", "passed": index == 0, "evidence": "Observed"}
+        for index in range(4)
+    ]
+    grade_cases = {
+        "disagreeing": {
+            "summary": {"passed": 9, "failed": 1, "total": 10, "pass_rate": 0.9},
+            "assertion_results": assertions,
+        },
+        "missing": {"assertion_results": assertions},
+        "invalid": {"summary": {"pass_rate": 2}, "assertion_results": assertions},
+        "malformed": {
+            "summary": {"passed": 9, "failed": 1, "total": 10, "pass_rate": 0.9},
+            "assertion_results": assertions + [{"text": "No verdict"}],
+        },
+        "invalid-fallback": {"summary": {"pass_rate": 2}, "assertion_results": []},
+        "spec-precedence": {
+            "summary": {"passed": 3, "failed": 2, "total": 5, "pass_rate": 0.6},
+            "assertion_results": None,
+            "expectations": assertions,
+        },
+    }
+    grade_workspace = root / "grade-workspace"
+    grade_run = grade_workspace / "eval-1" / "with_skill"
+    (grade_run / "outputs").mkdir(parents=True)
+    (grade_run / "grading.json").write_text(json.dumps(grade_cases["disagreeing"]), encoding="utf-8")
+    actual_benchmark = aggregate_benchmark.generate_benchmark(grade_workspace, "Grades")
+    for name, case in grade_cases.items():
+        (root / f"grades-{name}.html").write_text(
+            review.generate_html(
+                [dict(discovered[0], grading=case)], "Grades",
+                benchmark=actual_benchmark if name == "disagreeing" else None,
+            ),
+            encoding="utf-8",
+        )
+    collision_workspace = root / "collision-workspace"
+    for parts in (("eval-1", "with_skill"), ("eval-1-with_skill",)):
+        (collision_workspace.joinpath(*parts) / "outputs").mkdir(parents=True)
+    collision_runs = review.find_runs(collision_workspace)
+    (root / "collision.html").write_text(
+        review.generate_html(collision_runs, "Distinct runs", server_mode=True),
+        encoding="utf-8",
+    )
     notes_dir = root / "notes-workspace" / "eval-1" / "with_skill"
     (notes_dir / "outputs").mkdir(parents=True, exist_ok=True)
     (notes_dir / "outputs" / "answer.txt").write_text("Answer", encoding="utf-8")
@@ -169,7 +213,7 @@ def create_fixture(root: Path) -> None:
         "path": "eval-2/with_skill/run-1/grading.json",
         "reason": "no usable summary and no valid assertion results",
     }])
-    plain_run = dict(discovered[0], user_notes=None)
+    plain_run = dict(discovered[0], id="run:plain", user_notes=None)
     (root / "notes.html").write_text(
         review.generate_html(notes_runs + [plain_run], "Notes", benchmark=notes_benchmark),
         encoding="utf-8",

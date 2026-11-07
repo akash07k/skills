@@ -86,6 +86,10 @@ tell the agent to read only the relevant one.
   approaches work. Be exact, for example "run exactly this command", where a
   step is fragile or the order matters.
 - Teach a method for a class of problems, not the answer to one instance.
+- Create a skill for reusable knowledge, a method, a pattern, or a reference.
+  Keep one-off stories out of the instructions. Put project-only conventions
+  in the project's instructions file unless the user wants a reusable skill.
+  If a constraint is mechanical, prefer an existing validator or tool.
 - Use the imperative form.
 - Explain why an instruction matters. A model that understands the reason
   handles new cases better than one that follows a rule. If you find yourself
@@ -110,10 +114,57 @@ tell the agent to read only the relevant one.
   Output: feat(auth): implement JWT-based authentication
   ```
 
+- Prefer one complete, adaptable example from a real task. Choose the most
+  relevant language instead of duplicating the example across many languages.
+  Use placeholders when the output contract needs variable fields, not
+  as a replacement for an example that actually works.
+- Keep terms consistent. Use names that describe the method and searchable
+  symptoms, errors, commands, and formats. Do not rename an existing skill
+  merely to adopt a different naming style.
+- Avoid facts that expire without context. For version-specific behavior,
+  state the applicable version and how to check it.
 - Bundle a script when every run would otherwise write the same helper code.
   Read `references/scripts.md` before you write or change a bundled script.
   It covers pinned one-off commands, inline dependencies, no interactive
   prompts, `--help`, error messages, JSON output and exit codes.
+
+## Match guidance to the failure
+
+Choose the form from observed behavior, not from a preference for strict rules.
+
+| Observed failure | Useful form | Example |
+| --- | --- | --- |
+| The agent understands a rule but skips it | Explicit requirement with a counter to the observed workaround | Require the agreed verification before reporting completion |
+| The output has the wrong shape | Positive recipe or output contract | Result, evidence, then a necessary next action |
+| A required element is omitted | Required field in the template or schema | An evidence field for each verdict |
+| The action depends on a condition | Condition followed by the action | If the brief exists, reference it rather than repeating it |
+
+Vague exceptions reopen the decision. Replace "unless relevant" with an
+observable condition when an exception is real. If a length limit applies
+only to prose, scope it to that section rather than adding an exemption
+after a limit on the whole output.
+
+Explain the reason for a requirement. Put it at the point where the agent
+must act. Use short checklists for meaningful dependencies.
+Use direct language for genuine requirements, not artificial authority,
+false urgency, guilt, or invented claims about what everyone does.
+Collaborative wording must preserve honest disagreement.
+
+For discipline failures, build a short table from actual stated
+rationalizations and the requirement each one misses. Do not transplant
+another skill's excuses as hypothetical rules. For wording experiments,
+read `references/testing-skills.md`.
+
+## Use diagrams only for decisions
+
+Use a small flowchart when a branch or stopping condition is easy to miss.
+Use numbered steps for a linear process and a table for reference facts.
+Give decisions question labels, actions verb labels, and branches explicit
+conditions. Keep runnable code in code blocks, not diagram nodes.
+
+If the target host renders Mermaid, use it directly. If the user needs DOT
+or SVG, use an available renderer and check the diagram's branches and result.
+Do not add a Graphviz dependency or a rendering script unless the task needs it.
 
 Skills must not contain malware, exploit code or any content that could harm
 system security. What a skill does must not surprise a user who reads its

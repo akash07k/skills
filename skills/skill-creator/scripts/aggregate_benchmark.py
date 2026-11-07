@@ -229,7 +229,10 @@ def resolve_summary(
     if summary is not None and not isinstance(summary, dict):
         print(f"Warning: Invalid summary in {grading_file}", file=sys.stderr)
         summary = None
-    if isinstance(summary, dict) and not is_number(summary.get("pass_rate")):
+    if isinstance(summary, dict) and (
+        not is_number(summary.get("pass_rate"))
+        or not 0 <= summary["pass_rate"] <= 1
+    ):
         print(f"Warning: Missing or invalid summary.pass_rate in {grading_file}", file=sys.stderr)
         summary = None
     if computed is None:
