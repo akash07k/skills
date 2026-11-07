@@ -1,7 +1,7 @@
 ---
 name: code-review
 description: Use this skill when the user asks for a code review, audit, inspection, sanity check, or independent verification of existing code or changes, such as a pull request, diff, commit range, bug fix, refactor, dependency update, agent-generated change, or whole repository. Trigger for questions like "is this safe to merge?" or "is this overengineered?", including large or generated diffs and checks against supplied tests or data. Read project conventions first and deliver one consolidated review of correctness, overengineering, readability, architecture, security, and performance, with line-anchored findings, coverage, and a verdict. Do not use it for implementation or editing code, acting on review comments, creating or describing pull requests, release summaries, or dedicated threat modeling or penetration testing.
-license: AGPL-3.0-or-later
+license: MIT
 ---
 
 # Code Review and Quality

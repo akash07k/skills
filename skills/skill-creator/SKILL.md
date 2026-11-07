@@ -2,7 +2,7 @@
 name: skill-creator
 description: |
   Use this skill when creating, editing, testing, evaluating, or packaging an Agent Skill (`SKILL.md`) for any compatible agent or harness. Load it before you create or change any skill folder, because it bundles the spec validator, eval and benchmark runners, description optimizer, and packager. Use it to turn workflows into reusable skills, improve instructions or trigger descriptions, add scripts or references, compare a skill against a baseline, validate against the Agent Skills standard, or package a skill. Trigger even when the user does not say "Agent Skill" but wants to package a repeatable workflow for on-demand use or asks why a skill does not activate. Do not use it for standalone prompt writing, custom instructions such as `AGENTS.md`, custom agents, or MCP servers unless the user wants the result built as a skill. Do not use it to write CI pipelines or GitHub Actions workflows, even ones that run skill evals.
-license: AGPL-3.0-or-later
+license: MIT
 compatibility: Requires Python 3.13+ for bundled scripts. Automated trigger evaluation and description optimization currently use the authenticated GitHub Copilot CLI with network access; this is an optional evaluation backend, not a requirement of generated skills.
 ---
 
