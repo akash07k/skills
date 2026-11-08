@@ -30,8 +30,15 @@ Recommend baseline-first authoring, then honor the user's chosen evidence path.
 | Mixed | Combine the relevant scenarios | Evidence for each behavior the skill promises |
 
 For subjective work, use agreed quality criteria and human or blind review.
-Do not turn taste into an arbitrary pass/fail assertion. Ask about deeper
-testing only when it addresses a relevant uncertainty.
+Do not turn taste into an arbitrary pass/fail assertion.
+Recommend pressure scenarios for discipline skills by default.
+Recommend repeated wording tests for behavior-shaping guidance by default.
+Pure reference skills need retrieval and application tests, not pressure or
+wording tests unless they also promise those behaviors.
+Explain the host, model, sessions, and known cost or quota implications.
+Obtain approval for the selected tests and budget before running them.
+Honor lighter paths. State which applicable tests were not run and report
+the actual sample counts when they are lower than recommended.
 
 ## Observe, draft, and retest
 
@@ -138,10 +145,12 @@ If the control already succeeds at both, record no demonstrated need for a rewri
 ## Wording micro-tests
 
 A micro-test is a small experiment comparing instruction wordings.
-Offer it when a specific wording causes inconsistent or wrong behavior.
-It does not replace complete task runs.
+Recommend it by default for new or changed behavior-shaping guidance,
+even when no failure has yet been observed.
+It does not replace complete task runs or pressure scenarios.
 
-1. Choose one observed failure and an agreed task that exposes it.
+1. Choose an observed failure or an agreed behavior to examine.
+   Use a realistic task that can expose the behavior without inventing a failure.
 2. Compare a no-guidance control with a small number of wording variants.
    Change the wording, not the task, tools, or other instructions.
 3. Use the realistic surrounding skill or template in each variant.
@@ -160,8 +169,9 @@ It does not replace complete task runs.
 7. Confirm a selected wording on fresh tasks and full execution runs.
 
 If the control does not expose the suspected failure, do not claim a wording
-fix. Reconsider the test or stop that experiment. This does not prohibit
-creating a skill for a different demonstrated need.
+fix or invent a baseline failure. Record the successful control.
+Reconsider the test or stop that experiment within the agreed plan.
+This does not prohibit creating a skill for a different demonstrated need.
 
 Use explicit contracts and observable conditions from
 `references/writing-skills.md`. Do not assume that prohibitions, stronger
@@ -170,7 +180,9 @@ language, or extra exceptions improve every kind of output.
 ## Pressure tests for discipline
 
 A pressure test adds realistic incentives to skip an agreed requirement.
-Offer it for discipline skills, not for every technique or reference.
+Recommend it by default for discipline skills, not for every technique or reference.
+Include the scenario, number of sessions, host, model, and known cost or quota
+implications in the proposed plan. Ask for approval before execution.
 Academic questions can expose misunderstanding, but correct answers do not
 prove that an agent follows the rule while executing a task.
 

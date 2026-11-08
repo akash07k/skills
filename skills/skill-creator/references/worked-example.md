@@ -103,7 +103,8 @@ Use the frozen checks for both.
 
 ## Prepare a controlled wording test
 
-Offer this test only if real outputs show inconsistent contract compliance.
+Recommend this test for behavior-shaping guidance, even before a failure is observed.
+Ask the user to approve the sessions and budget before running it.
 Keep the full surrounding context and task identical:
 
 ```text

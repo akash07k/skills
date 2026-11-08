@@ -69,8 +69,8 @@ Use the observed gaps to choose the guidance form in
 
 After drafting, use a new iteration directory for candidate and baseline
 runs. Do not reuse a coached baseline or mix unmatched tasks into the score.
-Use `references/testing-skills.md` for tests by skill type and optional
-wording or pressure experiments.
+Use `references/testing-skills.md` for tests by skill type and the default
+recommendations for repeated wording and discipline pressure tests.
 
 For a multi-turn case, retain the approval turn and subsequent tool events.
 Make sure that the agreed budget includes nested executors and reviewers.

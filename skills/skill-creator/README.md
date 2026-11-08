@@ -302,7 +302,7 @@ dependency, and its mandatory deletion or publishing rules do not apply.
 | --- | --- |
 | `writing-skills/SKILL.md` | Baseline-first recommendation, tests by skill type, failure-matched guidance, concise examples |
 | `references/discovery.md` | Trigger-focused descriptions, searchable vocabulary, staged reading, descriptive names |
-| `references/testing-skills-with-subagents.md` and `references/bulletproofing.md` | Optional pressure tests, observed workaround counters, follow-up diagnosis, fresh retests |
+| `references/testing-skills-with-subagents.md` and `references/bulletproofing.md` | Recommended pressure tests for discipline skills, observed workaround counters, follow-up diagnosis, fresh retests |
 | `references/CLAUDE_MD_TESTING.md` | No-guidance controls and comparable instruction variants, without treating predicted results as observations |
 | `references/persuasion-principles.md` | Clear requirements, reasons, commitments, and sequencing, without fabricated authority or compliance guarantees |
 | `references/anthropic-best-practices.md` | Expert material, independent author and executor contexts, navigation observations, artifact inspection, reusable tools |
@@ -312,7 +312,8 @@ dependency, and its mandatory deletion or publishing rules do not apply.
 | `docs/superpowers/specs/2026-06-10-positive-instruction-redesign-design.md` | Separate composition and recognition, preserve useful detection rules, and retain tested no-change decisions |
 | `docs/porting-to-a-new-harness.md` and contribution guidance | Optional installed-host and compaction checks, artifact inspection, and destination-specific human review |
 
-Use `references/testing-skills.md` for optional experimental methods and
+Use `references/testing-skills.md` for the recommended pressure and repeated
+wording tests, with user-approved scope and budget, and
 `references/host-adaptations.md` for draft replacement and publishing choices.
 Use `references/worked-example.md` for connected task, draft, control, variant,
 checker, pressure, and decision examples. Its outputs are illustrative.

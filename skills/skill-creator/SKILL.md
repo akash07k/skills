@@ -17,7 +17,7 @@ Agent Skills format. The main loop is:
 4. Help the user review the results, both by reading the outputs and with
    benchmark numbers.
 5. Change the skill based on the feedback. Repeat until the user is satisfied.
-6. Offer relevant deeper tests, description optimization, and delivery choices.
+6. Recommend relevant robustness tests, description optimization, and delivery choices.
 
 Generated skills follow the Agent Skills format and should be client-neutral by
 default. Add client-specific frontmatter, installation paths, tools or commands
@@ -70,16 +70,23 @@ conversation so the user has less to explain.
 ### Choose the evidence path
 
 Read `references/testing-skills.md` when planning behavioral tests or
-diagnosing instruction failures. Recommend one path and ask for the user's
-choice. Do not present every optional experiment at the start.
+diagnosing instruction failures. Recommend baseline-first behavioral testing.
+For discipline skills, recommend pressure scenarios by default.
+For behavior-shaping guidance, recommend repeated wording tests by default.
+Pure reference skills do not need either test unless they promise those behaviors.
+Explain the proposed host, model, session count, and known cost or quota impact.
+Ask the user to select the tests and budget before running them.
+Honor a lighter path. Identify unrun tests and reduced sample counts.
 Read `references/worked-example.md` when the user needs a concrete authoring
 experiment, instruction variants, checker examples, or a no-change decision.
 
 - Baseline-first: Agree on prompts and criteria, observe an independent
   baseline, draft from the observed gaps, then run the candidate and baseline.
 - Informal review: Draft and review examples with the user. Label any
-  same-context checks as sanity checks, not independent comparisons.
-- Draft-only: Write and validate the skill. State that its behavior is untested.
+  same-context checks as sanity checks, not independent comparisons. State
+  when the recommended pressure or repeated wording tests were not run.
+- Draft-only: Write and validate the skill. State that its behavior is untested,
+  including any applicable pressure or repeated wording tests.
 
 For new skills, use no skill as the baseline. For existing skills, keep an
 unchanged version for comparison before editing. Prior transcripts can guide
@@ -220,13 +227,17 @@ validation do not prove that a consuming agent follows the skill.
 Stop at the agreed criteria or run budget, when the user stops, or when
 changes no longer make progress. Blank feedback is not proof of reliability.
 
-### Deeper evaluation (optional)
+### Robustness and deeper evaluation
 
-Offer the next useful experiment when evidence calls for it. Use
-`references/testing-skills.md` for wording micro-tests, pressure scenarios,
-test-quality checks, and fresh confirmation tasks. Explain the planned runs
-and ask before expanding the agreed budget. A request to edit a skill does
-not authorize a model-backed experiment.
+For behavior-shaping guidance, recommend repeated wording tests as part of
+the default evaluation plan, not only after an observed failure.
+For discipline skills, also recommend pressure scenarios that require action.
+Use `references/testing-skills.md` for both methods and their scope.
+Explain the proposed sessions and known cost or quota implications before
+asking for approval. A request to edit a skill does not authorize model runs.
+If the user selects a lighter path, report unrun tests and reduced sample counts.
+Offer other checks or fresh confirmation when they address a useful uncertainty.
+Ask before expanding the agreed budget.
 
 If an experimental draft obstructs a fresh approach, offer to replace or
 rewrite that draft. Agree on the files and whether to retain a copy first.
