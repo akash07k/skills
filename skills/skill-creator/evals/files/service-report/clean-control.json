@@ -1,0 +1,45 @@
+{
+  "fixture_kind": "illustrative",
+  "task": "Return one JSON object with incident_id, affected_users, and evidence. affected_users must be an integer. Evidence must be a nonempty list of supported source identifiers. Match all values to the supplied record.",
+  "input": {
+    "incident_id": "svc-17",
+    "service": "billing-api",
+    "affected_users": 12,
+    "source": "monitor export"
+  },
+  "variants": [
+    {
+      "name": "control",
+      "instruction": "",
+      "samples": [
+        {"incident_id": "svc-17", "affected_users": 12, "evidence": ["monitor export"]},
+        {"incident_id": "svc-17", "affected_users": 12, "evidence": ["monitor export"]},
+        {"incident_id": "svc-17", "affected_users": 12, "evidence": ["monitor export"]},
+        {"incident_id": "svc-17", "affected_users": 12, "evidence": ["monitor export"]},
+        {"incident_id": "svc-17", "affected_users": 12, "evidence": ["monitor export"]}
+      ]
+    },
+    {
+      "name": "prohibition",
+      "instruction": "Do not add prose or omit incident_id, affected_users, or evidence.",
+      "samples": [
+        {"incident_id": "svc-17", "affected_users": 12, "evidence": ["monitor export"]},
+        {"incident_id": "svc-17", "affected_users": 12, "evidence": ["monitor export"]},
+        {"incident_id": "svc-17", "affected_users": 12, "evidence": ["monitor export"]},
+        {"incident_id": "svc-17", "affected_users": 12, "evidence": ["monitor export"]},
+        {"incident_id": "svc-17", "affected_users": 12, "evidence": ["monitor export"]}
+      ]
+    },
+    {
+      "name": "recipe",
+      "instruction": "Return only the JSON object with incident_id, affected_users, and evidence.",
+      "samples": [
+        {"incident_id": "svc-17", "affected_users": 12, "evidence": ["monitor export"]},
+        {"incident_id": "svc-17", "affected_users": 12, "evidence": ["monitor export"]},
+        {"incident_id": "svc-17", "affected_users": 12, "evidence": ["monitor export"]},
+        {"incident_id": "svc-17", "affected_users": 12, "evidence": ["monitor export"]},
+        {"incident_id": "svc-17", "affected_users": 12, "evidence": ["monitor export"]}
+      ]
+    }
+  ]
+}

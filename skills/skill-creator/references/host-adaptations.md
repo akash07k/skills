@@ -53,6 +53,43 @@ names, or configuration switches.
 Make the review file before you change the skill based on the test results, so
 that the user can examine the outputs.
 
+## Native discovery and execution checks
+
+Offer these checks when the user needs evidence about an installed skill.
+An isolated trigger score does not test competition with installed skills.
+
+1. Agree on the target host, model, installed skill version, tasks, and session budget.
+2. Install only the selected artifact using the host's supported mechanism.
+3. Start a fresh session with the normal competing skills available.
+4. Send a natural task without a skill name, path, or instruction to load it.
+5. Observe selection, required reference reads, and the completed artifact.
+6. Repeat a near-miss that belongs to another skill and a relevant mixed task.
+
+For a report skill, use a factual report task, a request to rewrite its reusable
+workflow, and an unrelated code task. Agree on the expected owner of each task.
+Do not force-load the candidate in these checks.
+Save the task, installed version, tool events, artifacts, and observed host/model.
+If the host does not expose skill-loading events, record that observation limit.
+Do not infer successful discovery from the assistant saying that it used the skill.
+
+If results differ from isolated probes, inspect competitors and reading cues.
+If every description fails the same case, examine task labels and host behavior.
+Do not keep rewriting a description to hide an execution or installation problem.
+
+### Long sessions and context reduction
+
+Offer a post-compaction check only when the intended workflow needs it.
+Compaction is the host's reduction of earlier conversation context.
+Use the host's actual mechanism, then resume a relevant task.
+Make sure that the required guidance remains available and the output stays correct.
+If the host cannot expose or initiate compaction, state that the check is unverified.
+Do not replace real context reduction with an empty session and call it equivalent.
+
+Record installed body size, repeated reads, model requests, and available usage.
+Compare repeated runs before attributing overhead to longer instructions.
+Do not impose another host's byte limit or add a bootstrap injector.
+Use the existing host lifecycle instead.
+
 ## Where skills are installed
 
 Use `.agents/skills/<skill-name>/SKILL.md` for a project skill intended to work
@@ -123,6 +160,12 @@ Keep unrelated local changes, private inputs, and eval outputs out of the
 publication unless the user explicitly includes them.
 Use the current host's available Git or publishing tools.
 Do not add another publishing runner.
+
+Before a selected upstream contribution, read the destination's current
+contribution rules and pull request template. Check scope and previous proposals.
+Include the requested authoring host/model details and relevant before/after evidence.
+Complete the required human diff review and disclose unverified behavior.
+Do not copy one repository's branch policy or review rules into every generated skill.
 
 Complete the selected action and report its actual artifact, path, or URL.
 If the host cannot perform it, explain the limitation and provide the

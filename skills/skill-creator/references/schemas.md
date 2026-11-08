@@ -287,6 +287,9 @@ Tokens come from `timing.json` `total_tokens`.
 
 Output from Benchmark mode. Located at `<workspace>/iteration-N/benchmark.json`.
 
+This illustrative excerpt shows one run and summaries from a larger dataset.
+Its per-run counts agree with the complete assertion list shown below.
+
 ```json
 {
   "metadata": {
@@ -304,7 +307,7 @@ Output from Benchmark mode. Located at `<workspace>/iteration-N/benchmark.json`.
       "configuration": "with_skill",
       "run_number": 1,
       "result": {
-        "pass_rate": 0.85,
+        "pass_rate": 0.857142857,
         "passed": 6,
         "failed": 1,
         "total": 7,
@@ -314,7 +317,13 @@ Output from Benchmark mode. Located at `<workspace>/iteration-N/benchmark.json`.
         "errors": 0
       },
       "assertion_results": [
-        {"text": "...", "passed": true, "evidence": "..."}
+        {"text": "Output is a PDF", "passed": true, "evidence": "PDF artifact inspected."},
+        {"text": "Name field is filled", "passed": true, "evidence": "Expected name appears."},
+        {"text": "Date field is filled", "passed": true, "evidence": "Expected date appears."},
+        {"text": "Amounts match the input", "passed": true, "evidence": "Amounts match the supplied records."},
+        {"text": "All pages are present", "passed": true, "evidence": "Page count matches the input."},
+        {"text": "Text is readable", "passed": true, "evidence": "Rendered pages inspected."},
+        {"text": "Signature is present", "passed": false, "evidence": "Signature field is empty."}
       ],
       "notes": [
         "Used 2023 data, may be stale",
@@ -426,6 +435,14 @@ Output from blind comparator. Located at `<grading-dir>/comparison-N.json`.
 `TIE` means adequate evidence shows materially equivalent outputs.
 `INCONCLUSIVE` means the evidence cannot support a comparison.
 Neither has a winner or loser, so both skip post-hoc `analysis.json`.
+Check mandatory requirements before ranking soft quality. Describe their
+verdicts in `reasoning`; no additional JSON fields are required.
+When both outputs fail, say that neither meets acceptance.
+A supported relative winner does not imply successful completion.
+Known failure is not automatically `INCONCLUSIVE`.
+A completed run's verified complete output inventory can establish that a
+required artifact is absent. Treat inaccessible or unprovided artifacts as
+unknown when the available evidence cannot establish whether they exist.
 `assertion_results` (assertion checks per output) is included only when
 supplied assertions can be evaluated for both outputs. It uses the same
 name as `grading.json`.

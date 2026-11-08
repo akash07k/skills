@@ -1,0 +1,17 @@
+{
+  "fixture_kind": "illustrative",
+  "task": "Reconcile a warehouse stock count.",
+  "checks": [
+    "Computes the difference from recorded and counted units.",
+    "Flags a nonzero difference.",
+    "Reports an invalid count without inventing a value."
+  ],
+  "runs": [
+    {"configuration": "baseline", "run_number": 1, "passed": 3, "failed": 0, "total": 3},
+    {"configuration": "candidate", "run_number": 1, "passed": 3, "failed": 0, "total": 3},
+    {"configuration": "baseline", "run_number": 2, "passed": 3, "failed": 0, "total": 3},
+    {"configuration": "candidate", "run_number": 2, "passed": 3, "failed": 0, "total": 3},
+    {"configuration": "baseline", "run_number": 3, "passed": 3, "failed": 0, "total": 3},
+    {"configuration": "candidate", "run_number": 3, "passed": 3, "failed": 0, "total": 3}
+  ]
+}

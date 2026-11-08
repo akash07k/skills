@@ -34,6 +34,8 @@ You receive these parameters in your prompt:
 
 Use the supplied rubric. If none was supplied, derive it from the task
 before reading either output. Keep its criteria fixed during the comparison.
+Separate mandatory requirements from preferences. Use the task and agreed
+rubric to identify requirements. Do not turn every quality check into a gate.
 Use two dimensions when they fit the task:
 
 **Content Rubric** (what the output contains):
@@ -62,38 +64,58 @@ Adapt criteria to the specific task. For example:
 3. Use available artifact inspection tools, not just claims about the files.
 4. Record missing or inaccessible evidence. An available empty file is
    evidence of an empty result, not an inaccessible result.
+5. If a completed run's complete output inventory confirms that a required
+   artifact was not created, record an observed failure. If the inventory
+   is incomplete or an external artifact was not supplied, record unknown
+   evidence instead. Do not infer absence from an unavailable file alone.
 
-### Step 4: Evaluate Each Output Against the Rubric
+### Step 4: Check Requirements and Assertions
 
-For each output (A and B):
+For each output, check the mandatory requirements before ranking quality.
+Record which requirements pass, fail, or lack evidence in `reasoning`.
+A polished output that fails a mandatory requirement cannot outrank an
+output that meets all mandatory requirements.
 
-1. **Score each criterion** on the rubric (1-5 scale)
-2. **Calculate dimension totals**: Content score, Structure score
-3. **Calculate overall score**: Average of dimension scores, scaled to 1-10
-
-Do not invent a score when the evidence cannot support it.
-Use the null values allowed by `references/schemas.md` for unavailable scores.
-
-### Step 5: Check Assertions (if provided)
-
-If assertions are provided:
-
-1. Check each assertion against output A
-2. Check each assertion against output B
-3. Count pass rates for each output
-4. Use assertion scores as secondary evidence (not the primary decision factor)
+If assertions are provided, check them for both outputs and count pass rates.
+Keep preference checks separate from mandatory requirements in the reasoning.
+Do not change a requirement into a preference after seeing the outputs.
 
 If the evidence prevents evaluating the supplied checks for both outputs,
 omit `assertion_results` and explain the missing evidence.
 Do not invent verdicts or count unevaluated assertions as passing.
 
+### Step 5: Evaluate Each Output Against the Rubric
+
+For each output (A and B):
+
+1. Score each criterion on the rubric's scale, normally 1-5.
+2. Calculate each dimension score as the mean of its criterion scores.
+3. For equally weighted 1-5 dimensions, scale their mean to 1-10.
+
+Use the supplied rubric's weights when they differ. Keep the calculation
+fixed. Quality scores describe outputs, but do not override mandatory gates.
+Do not invent a score when the evidence cannot support it.
+Use the null values allowed by `references/schemas.md` for unavailable scores.
+
 ### Step 6: Determine the Winner
 
 Compare A and B based on (in priority order):
 
-1. **Primary**: Overall rubric score (content + structure)
-2. **Secondary**: Assertion pass rates (if applicable)
-3. Choose a result supported by the agreed criteria:
+1. Whether each output meets the mandatory requirements.
+2. Overall rubric quality among outputs that meet those requirements.
+3. Preference-check results where the agreed rubric makes them relevant.
+
+If only one output meets all mandatory requirements, select that output.
+If unknown evidence can change this decision, use `INCONCLUSIVE`.
+An available empty or malformed artifact is observed failure, not missing access.
+A confirmed absent required artifact is also an observed failure.
+An inaccessible artifact with unknown contents is not an observed failure.
+
+If both outputs fail, state that neither meets acceptance. Select a relative
+winner only when the agreed rubric supports a meaningful advantage.
+A relative winner is not a successful task result.
+
+Choose a result supported by the evidence:
 
 - `A` or `B`: The evidence shows a meaningful task advantage.
 - `TIE`: Enough evidence exists, but the outputs are materially equivalent.
@@ -120,7 +142,7 @@ outputs. This is the same name that `grading.json` uses.
 - **Stay blind**: DO NOT try to infer which skill produced which output. Judge purely on output quality.
 - **Be specific**: Cite specific examples when explaining strengths and weaknesses.
 - **Respect uncertainty**: Distinguish equivalent results from insufficient evidence.
-- **Output quality first**: Assertion scores are secondary to overall task completion.
+- **Requirements first**: Formatting and preference scores cannot compensate for a failed mandatory requirement.
 - **Be objective**: Don't favor outputs based on style preferences; focus on correctness and completeness.
 - **Explain your reasoning**: The reasoning field should make it clear why you chose the winner.
 - **Handle edge cases**: Both outputs can fail or both can succeed.

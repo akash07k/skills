@@ -1,0 +1,2 @@
+You asked for an incident summary. The supplied record concerns billing.
+The incident svc-17 affected 12 users.

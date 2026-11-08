@@ -82,6 +82,19 @@ have the same text. A duplicate can go into both the train set and the
 held-out validation set, which makes the holdout weaker, so remove duplicates
 that you did not intend.
 
+The bundled splitter shuffles individual entries, not scenario families.
+For optimization, keep one representative of each narrow scenario in the input.
+Remove its close paraphrases from that input before the automatic split.
+Reserve different scenario families in a separate confirmation set.
+Do not use confirmation queries to select or rewrite the description.
+Run `scripts/run_eval.py` on that separate set after choosing a description.
+Run the removed paraphrases separately if they are useful diagnostics.
+Do not treat those related paraphrases as independent confirmation.
+If you use confirmation feedback to revise it, prepare new confirmation tasks.
+Do not assume that adjacent input entries stay in the same split.
+An isolated query naming a competing skill does not prove native competition.
+Use the native checks in `references/host-adaptations.md` for that evidence.
+
 Write queries that a real user of the target host would type. Use concrete details, such
 as file paths, column names, company names and URLs. Use different lengths,
 casual language, abbreviations and edge cases.

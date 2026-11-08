@@ -29,6 +29,12 @@ You receive these parameters in your prompt:
 2. Note the winning side (A or B), the reasoning, and any scores
 3. Understand what the comparator valued in the winning output
 
+Check whether the winner meets acceptance or only wins a relative comparison
+between failed outputs. Preserve that distinction in `comparison_summary`.
+Do not call a relative winner successful or recommend adopting it unchanged.
+Do not attribute a difference to the skill when the evidence only shows
+different outputs. Propose a fresh test when the cause remains uncertain.
+
 ### Step 2: Read Both Skills
 
 1. Read the winner skill's SKILL.md and key referenced files

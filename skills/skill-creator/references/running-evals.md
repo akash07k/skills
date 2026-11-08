@@ -72,6 +72,23 @@ runs. Do not reuse a coached baseline or mix unmatched tasks into the score.
 Use `references/testing-skills.md` for tests by skill type and optional
 wording or pressure experiments.
 
+For a multi-turn case, retain the approval turn and subsequent tool events.
+Make sure that the agreed budget includes nested executors and reviewers.
+Score the approval-dependent steps only when their execution is in the case's scope.
+Do not substitute prepared output files for a promised live baseline-first test.
+If fresh execution is unavailable, report the case as unrun or an explicitly selected replay.
+
+Before a case that requires nested executor sessions, check the selected
+host's actual tool permissions, context isolation, and transcript access.
+Make sure that its runner does not disable delegation or separate model calls.
+Count the outer executors, every nested executor, and any graders or reviewers.
+For a paired case with three nested sessions per configuration, that is two
+outer sessions plus six nested sessions before any grading or review.
+Include those sessions in the user-approved plan before starting.
+Record each nested session's actual events and outputs.
+If the host cannot provide these capabilities, mark the case unrun.
+Do not grade a missing nested execution as a behavioral failure.
+
 ## Step 1: Start paired runs
 
 If the host supports independent subagents, start the with-skill run and the

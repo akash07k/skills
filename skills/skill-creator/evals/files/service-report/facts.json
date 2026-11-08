@@ -1,0 +1,7 @@
+{
+  "fixture_kind": "illustrative",
+  "incident_id": "svc-17",
+  "service": "billing-api",
+  "affected_users": 12,
+  "source": "monitor export"
+}

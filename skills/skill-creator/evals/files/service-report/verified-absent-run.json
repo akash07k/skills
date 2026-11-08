@@ -1,0 +1,7 @@
+{
+  "fixture_kind": "illustrative",
+  "run_completed": true,
+  "output_inventory_complete": true,
+  "expected_output": "report.json",
+  "output_files": []
+}

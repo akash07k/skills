@@ -72,6 +72,8 @@ conversation so the user has less to explain.
 Read `references/testing-skills.md` when planning behavioral tests or
 diagnosing instruction failures. Recommend one path and ask for the user's
 choice. Do not present every optional experiment at the start.
+Read `references/worked-example.md` when the user needs a concrete authoring
+experiment, instruction variants, checker examples, or a no-change decision.
 
 - Baseline-first: Agree on prompts and criteria, observe an independent
   baseline, draft from the observed gaps, then run the candidate and baseline.
@@ -92,6 +94,8 @@ draft or edit a skill does not by itself authorize test files. Show proposed
 prompts and expected outcomes before saving or running them. Include the
 host, model, number of runs, and known quota or cost implications in the plan.
 Reuse an approved plan unless the task, criteria, or run budget changes.
+Count fresh executor sessions separately from underlying model requests.
+Include nested executor and reviewer sessions in the plan.
 
 Start with 2 or 3 realistic prompts, including an edge case. Match them to
 the skill type using `references/testing-skills.md`. After approval, save
@@ -210,6 +214,8 @@ without claiming an independent comparison.
 Keep successful test cases when revising the skill. Test new tasks before
 claiming that a fix generalizes. If the agent missed a reference, fix its
 placement or reading cue before adding more rules.
+Retain approved behavioral cases as regressions. Fixture checks and document
+validation do not prove that a consuming agent follows the skill.
 
 Stop at the agreed criteria or run budget, when the user stops, or when
 changes no longer make progress. Blank feedback is not proof of reliability.
@@ -235,6 +241,8 @@ comparator declares a tie or insufficient evidence, record that result and
 skip winner and loser analysis. Keep source labels hidden, agree on the
 rubric before examining outputs, and allow a real tie. This needs independent
 contexts or reviewers. The human review loop is usually enough.
+Check mandatory requirements before ranking presentation or other preferences.
+If both outputs fail, distinguish a relative winner from an acceptable result.
 
 ## Optimize the description
 
@@ -276,6 +284,8 @@ authorize a commit, push, release, or pull request.
   report.
 - Skill activation, successful execution, and rule-following are different
   outcomes. Test the one that the user needs.
+- A correct first draft does not prove that the skill detects defects during
+  review. Test both behaviors when the skill promises both.
 
 ## Checklist
 
@@ -315,6 +325,8 @@ The paths are relative to this skill's directory. Each script needs Python
   loading and writing style.
 - `references/testing-skills.md`: baseline-first authoring, tests by skill
   type, wording experiments, pressure tests, and evidence limits.
+- `references/worked-example.md`: a complete illustrative authoring experiment,
+  independent checks, pressure actions, and retained experiment decisions.
 - `references/running-evals.md`: running, grading, benchmark and viewer.
 - `references/description-optimization.md`: trigger queries and the
   optimization loop.

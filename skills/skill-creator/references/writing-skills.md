@@ -72,6 +72,11 @@ give reference files longer than 300 lines a table of contents. When a skill
 supports several domains or frameworks, use one reference file for each and
 tell the agent to read only the relevant one.
 
+If a workflow requires another skill, name it and state exactly when to load it.
+Use the target host's supported skill tool. Check availability before promising that dependency.
+Distinguish required background from optional related material.
+Do not force-load a whole skill when a focused reference provides the needed fact.
+
 ## Writing style
 
 - Add what the agent lacks and omit what it knows. For each line, ask: "Would
@@ -144,6 +149,10 @@ observable condition when an exception is real. If a length limit applies
 only to prose, scope it to that section rather than adding an exemption
 after a limit on the whole output.
 
+If the skill also reviews its output, preserve the review's detection rules
+when replacing composition prohibitions with a recipe.
+Use `references/testing-skills.md` to test production and recognition separately.
+
 Explain the reason for a requirement. Put it at the point where the agent
 must act. Use short checklists for meaningful dependencies.
 Use direct language for genuine requirements, not artificial authority,
@@ -154,6 +163,9 @@ For discipline failures, build a short table from actual stated
 rationalizations and the requirement each one misses. Do not transplant
 another skill's excuses as hypothetical rules. For wording experiments,
 read `references/testing-skills.md`.
+
+Use `references/worked-example.md` when the user needs an adaptable skill
+example, a controlled experiment, or independent checker examples.
 
 ## Use diagrams only for decisions
 

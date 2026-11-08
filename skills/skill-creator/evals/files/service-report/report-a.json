@@ -1,0 +1,9 @@
+{
+  "headline": "Billing incident: clear impact and recovery summary",
+  "incident_id": "svc-17",
+  "affected_users": 13,
+  "summary": "The billing service incident affected a small, clearly identified group of users.",
+  "evidence": [
+    "monitor export"
+  ]
+}

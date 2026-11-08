@@ -5,6 +5,16 @@ changes to skill instructions. Use the existing workspace, grading, and
 viewer tools in `references/running-evals.md`. These methods do not require
 Superpowers, another runner, or a particular agent host.
 
+## Contents
+
+- [Choose tests](#choose-tests-for-the-skill) and [observe, draft, retest](#observe-draft-and-retest)
+- [Discovery and execution](#separate-discovery-from-execution)
+- [Test quality](#check-the-tests-themselves) and [production and review](#test-production-and-review-separately)
+- [Wording micro-tests](#wording-micro-tests) and [pressure tests](#pressure-tests-for-discipline)
+- [Follow-up diagnosis](#follow-up-diagnosis)
+- [Comparisons and confirmation](#independent-comparisons-and-confirmation)
+- [Experiment decisions](#retain-experiment-decisions) and [report-shape example](#example-a-report-with-the-wrong-shape)
+
 ## Choose tests for the skill
 
 A baseline is the agent's behavior without the candidate instructions.
@@ -33,6 +43,10 @@ testing only when it addresses a relevant uncertainty.
 5. Write the smallest guidance or reusable tool that addresses that gap.
 6. Run the candidate and baseline on the same tasks under comparable conditions.
 7. Keep successful cases when revising. Add fresh tasks to test generalization.
+
+State the selected path, required outcomes, and session budget before execution.
+Use the host's task list for real prerequisites, not ritual announcements.
+If a prerequisite fails, stop that dependent step and explain the missing evidence.
 
 Record the choices the agent made, sections it read, missed references,
 outputs it produced, and any stated reasons for skipping a requirement.
@@ -96,6 +110,31 @@ Keep acceptance checks that both configurations pass. Report them as
 non-discriminating in that comparison. Do not remove them to inflate the
 measured improvement. Record eval critiques separately from the frozen score.
 
+Keep mocks below the behavior being tested. Mock an external fetch, not the
+validation branch whose behavior the test promises to examine.
+Use complete response fixtures when later code reads their fields.
+If mock setup hides required side effects, use a focused integration check.
+Use `references/worked-example.md` for good and bad checker examples.
+
+## Test production and review separately
+
+Some skills promise to produce an artifact and then find defects in it.
+These are separate behaviors. Name both before editing the instructions.
+
+| Behavior | Test |
+| --- | --- |
+| Production | Generate an artifact from known inputs and inspect its facts and structure |
+| Recognition | Supply an artifact with a known defect and observe the review identify it |
+
+If a prohibition becomes a positive recipe, retain useful detection rules at
+the review step. An improved first draft does not prove that review still works.
+Seed a wrong value, missing evidence, or another relevant defect in a disposable artifact.
+Keep the reviewer independent when that is part of the agreed test.
+A grader rejecting the defect does not prove that the skill's own reviewer detects it.
+
+Score production and recognition separately. Include both stages in the session budget.
+If the control already succeeds at both, record no demonstrated need for a rewrite.
+
 ## Wording micro-tests
 
 A micro-test is a small experiment comparing instruction wordings.
@@ -106,10 +145,14 @@ It does not replace complete task runs.
 2. Compare a no-guidance control with a small number of wording variants.
    Change the wording, not the task, tools, or other instructions.
 3. Use the realistic surrounding skill or template in each variant.
+   Put the same required task information in every variant.
+   When testing wording form, express equivalent requirements in each wording.
+   A control omits added guidance, not the task requirements.
    For each sample, start a fresh context.
 4. Recommend at least five samples per variant, including the control.
-   Agree on the total calls before running. Two variants plus a control,
-   with five samples each on one task, require 15 calls.
+   Agree on the total sessions before running. Two variants plus a control,
+   with five samples each on one task, require 15 fresh samples.
+   Tool use and extra turns can require several model requests per session.
 5. Score the required behavior or output shape. Read every flagged match
    manually to distinguish actual violations from quotes or template echoes.
 6. Compare both success rates and variation between samples.
@@ -142,10 +185,21 @@ Do not force an A/B choice that excludes a legitimate solution.
 Clarifying missing information can be correct behavior.
 Mark simulated constraints as scenario facts, not real emergencies.
 
+Pair a shortcut scenario with a credible permitted-action scenario when useful.
+Make the pressures and task context comparable.
+Check that the fixtures support both outcomes before execution.
+Inspect whether the executor rejects the shortcut and performs the permitted action.
+This catches a rule that rejects every action.
+
 If the agent skips a rule that it understood, capture its stated workaround.
 Explain why that workaround fails the actual requirement. Add a short
 counterexample, rule-skipping table, or warning cue only for the observed gap.
 If the output has the wrong shape instead, use a positive recipe.
+
+Connect an observed workaround to the governing requirement, the point of
+action, and a recognition cue. Update discovery symptoms only when they
+describe when the skill needs to load. Do not put workflow instructions in
+the description or require every source correction layer for every failure.
 
 Retest the original case and fresh variations. Stop at the agreed budget
 or criteria. Report the scenarios and failure rates observed.
@@ -178,16 +232,46 @@ If reviewer order appears to affect the result, offer fresh comparisons
 with A/B reversed. Record disagreements instead of selecting only favorable
 judgments. Use `agents/comparator.md` for the result contract.
 A genuine tie and insufficient evidence are different outcomes.
+Check agreed mandatory requirements before preferences. A higher formatting
+score cannot compensate for a failed mandatory requirement.
 
 Separate exploration from confirmation. Scenarios used to select the best
 wording are selection evidence, even if they began as a held-out set.
 Use new tasks or queries for an independent estimate. Do not repeatedly
 select changes on the confirmation set and keep calling it independent.
 
+Keep confirmation tasks and criteria outside the loaded skill and executor's
+workspace until the run. Supply the task and its required inputs at execution.
+Keep the expected answers, other confirmation cases, and grader criteria
+outside the executor context. Exclude development `evals/` from both skill
+snapshots when it contains the confirmation set. Use the same exclusions for
+both configurations. If the skill needs those files to perform its work,
+declare that dependency and use a separate inaccessible confirmation source.
+If confirmation results guide another revision, use new tasks to confirm it.
+
 Report the number of runs, failures, missing evidence, known tradeoffs,
 and which host and model produced the results. Include time and token data
 only when observed. Five successful samples do not establish perfect
 reliability. A single preferred output does not establish a general winner.
+
+## Retain experiment decisions
+
+Save the task, skill versions, exact variants, criteria, outputs, and observed
+host/model information in the agreed workspace.
+Record the decision in the existing analysis notes or `outputs/user_notes.md`.
+Include the following facts:
+
+- The failure or hypothesis that motivated the experiment.
+- Control results, variant results, sample counts, and missing evidence.
+- The accepted change or the reason for making no change.
+- Fresh confirmation still needed and the remaining budget.
+
+Preserve rejected interventions. If a clean control prevents attributing
+benefit to the guidance, retain that result rather than proposing the same
+untested improvement again. Predicted results are not observations.
+Keep approved regression cases in `evals/evals.json`.
+Do not present fixtures or checker unit tests as measured agent behavior.
+Use `references/worked-example.md` for a complete illustrative record.
 
 ## Example: a report with the wrong shape
 

@@ -198,6 +198,49 @@ documents are outside this keyboard/screen-reader change.
 
 ## Development checks
 
+The task suite in `evals/evals.json` retains these behavioral cases:
+
+| IDs | Coverage |
+| --- | --- |
+| 1-3 | Portable drafting, a description-only edit, and first-turn eval approval |
+| 4 | Mandatory comparison gates, equivalent failures, inaccessible evidence, and confirmed absent or empty artifacts |
+| 5 | Live baseline-first authoring, grading, and static review |
+| 6 | A saved result under simulated deadline and winner-selection pressure |
+| 7 | Concrete controlled wording variants, independent criteria, and sample budgeting |
+| 8 | Separate production and defect-recognition exercises |
+| 9 | A runnable checker that accepts valid alternatives and rejects defective artifacts |
+| 10 | A preserved no-change decision when the control already succeeds |
+
+Saving these cases does not execute them. Approve a host/model and session
+budget before model-backed runs. Case 5 includes three nested executor sessions
+per outer execution. Include any independent comparator or reviewer sessions too.
+Other cases use supplied illustrative inputs, not claimed historical model results.
+Case 8 explicitly measures same-context sanity checks, not independent reliability.
+
+The Python fixture checks exercise JSON consistency, input paths, and the
+worked example's checker. They do not establish consuming-agent behavior.
+Use `references/host-adaptations.md` for separately selected native discovery
+and post-compaction checks. Forced-loading task cases cannot prove natural discovery.
+
+`evals/confirmation.json` contains two separately approved inventory tasks.
+They exercise permitted work and resistance to an unsupported result claim.
+They are unrun confirmation candidates, not part of the task suite above.
+Do not use them to select or rewrite the skill and still call them independent.
+
+For an approved confirmation run, stage the selected prompts and inputs in
+fresh workspaces and create `eval_metadata.json` as in `references/running-evals.md`.
+Load skill snapshots without their development `evals/` folders for both
+configurations. Keep assertion lists and other confirmation tasks outside the
+executor contexts. The packaged `.skill` archive already excludes `evals/`.
+If the skill depends on those files, use a separate inaccessible confirmation
+source instead. Record any observation limits and the actual session budget.
+
+Before case 5, make sure that the chosen host permits and records nested sessions.
+Do not use a runner that prohibits delegation or separate model calls.
+Two outer paired runs need six inner sessions in total, plus any model-backed
+grading or review. If the selected host cannot provide fresh inner contexts
+and their events, leave the case unrun.
+
 Run Python regression checks from the test directory. From the repository
 root:
 
@@ -266,9 +309,16 @@ dependency, and its mandatory deletion or publishing rules do not apply.
 | `references/flowcharts.md`, `references/graphviz-conventions.dot`, and `render-graphs.js` | Small decision diagrams and rendering when needed, without another bundled renderer |
 | `test-driven-development/SKILL.md` and `writing-good-tests.md` | Expected failures, minimal fixes, preserved regression cases, independent expectations, real behavior and mutation checks |
 | `using-superpowers/SKILL.md` and host references | Check actual activation tools, context inheritance, model availability, and lifecycle controls |
+| `docs/superpowers/specs/2026-06-10-positive-instruction-redesign-design.md` | Separate composition and recognition, preserve useful detection rules, and retain tested no-change decisions |
+| `docs/porting-to-a-new-harness.md` and contribution guidance | Optional installed-host and compaction checks, artifact inspection, and destination-specific human review |
 
 Use `references/testing-skills.md` for optional experimental methods and
 `references/host-adaptations.md` for draft replacement and publishing choices.
+Use `references/worked-example.md` for connected task, draft, control, variant,
+checker, pressure, and decision examples. Its outputs are illustrative.
+The source scenario designs and numerical reports are not raw reproducible
+campaign evidence in this repository. New behavioral cases remain unrun
+until their selected execution plan is approved and completed.
 Sample counts and observed effects in source material do not establish
 universal reliability. Evaluate the relevant behavior in the user's target
 host and model before making effectiveness claims.
