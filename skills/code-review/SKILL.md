@@ -1,6 +1,6 @@
 ---
 name: code-review
-description: Use this skill when the user asks for a code review, audit, inspection, sanity check, or independent verification of existing code or changes, such as a pull request, diff, commit range, bug fix, refactor, dependency update, agent-generated change, or whole repository. Trigger for questions like "is this safe to merge?" or "is this overengineered?", including large or generated diffs and checks against supplied tests or data. Read project conventions first and deliver one consolidated review of correctness, overengineering, readability, architecture, security, and performance, with line-anchored findings, coverage, and a verdict. Do not use it for implementation or editing code, acting on review comments, creating or describing pull requests, release summaries, or dedicated threat modeling or penetration testing.
+description: Use this skill when the user asks for a code review, audit, inspection, sanity check, or independent verification of existing code or changes. Review a supplied snippet, file, working tree, diff, commit range, pull request, subsystem, or entire repository, including large or generated material. Trigger for questions like "is this safe to merge?" or "is this overengineered?". Deliver one consolidated review of correctness, overengineering, readability, architecture, security, and performance, with evidence and coverage. Do not use it to implement changes, act on review comments, create or describe pull requests, write release summaries, or perform dedicated threat modeling or penetration testing.
 license: MIT
 ---
 
@@ -8,13 +8,13 @@ license: MIT
 
 ## Overview
 
-Review the entire change and the surrounding code it affects before you recommend a merge, whether the diff is one line or more than 15,000. For a whole-project audit, inspect the existing repository instead of looking for a diff. Cover six axes: correctness, overengineering, readability, architecture, security, and performance. Review only; do not edit the code under review.
+Review the requested material and enough surrounding context to understand it. The target may be a small snippet, an entire change, existing code, or a massive repository; no size is an automatic limit. For large scopes, work in bounded batches and report any unexamined areas. Cover six axes: correctness, overengineering, readability, architecture, security, and performance. Review only; do not edit the code under review. Post or submit a review only when the user explicitly asks.
 
-**Approval standard for changes:** Approve when the change meets its requirements and no Critical or Required findings remain, even if you would have written it differently. Don't block a change on style preferences or unrelated pre-existing problems; in a whole-project audit, existing problems are in scope. State verification gaps honestly.
+**Readiness standard for changes:** When the user asks whether a change is ready to merge or ship, recommend approval only when it meets its requirements and no Critical or Required findings remain, even if you would have written it differently. Otherwise use a neutral conclusion, not an approval-style verdict. Don't block a change on style preferences or unrelated pre-existing problems; when reviewing existing code, pre-existing problems are in scope. State verification gaps honestly.
 
 ## When to Use
 
-- Before merging a pull request or change, including one produced by another agent or model
+- When reviewing existing code or a change, including one produced by another agent or model
 - After a feature, refactor, or bug fix (review both the fix and its regression test)
 - When a change adds or upgrades dependencies: also read [references/dependencies.md](references/dependencies.md)
 - When a change is very large, has a weak description, or the author disputes a finding: also read [references/change-hygiene.md](references/change-hygiene.md)
@@ -73,10 +73,10 @@ Does the change add more moving parts than the required behavior needs?
 
 ### Step 1: Understand the Context and Conventions
 
-Before judging code, read the applicable repository instructions and conventions: root and nested `AGENTS.md` or equivalent files, README and contribution or architecture guidance, lint and formatter settings, test conventions, and representative existing code. Apply the guidance that covers each file. Distinguish documented rules from inferred patterns, and don't report a convention violation without evidence. Then set the scope:
+Before judging code, read applicable repository instructions and conventions when available: root and nested `AGENTS.md` or equivalent files, README and contribution or architecture guidance, lint and formatter settings, test conventions, and representative existing code. For supplied material without a repository, use the conventions provided and report missing context. Apply the guidance that covers each file. Distinguish documented rules from inferred patterns, and don't report a convention violation without evidence. Then set the scope:
 
-- **Change review:** What requirement does the diff implement, which files and lines changed, and what surrounding code and tests do they affect?
-- **Whole-project audit:** What are the entry points, components, tests, and relevant configuration, and which existing behaviors must be checked?
+- **Change review:** What requirement does the change implement, what material is available, and what surrounding code and tests does it affect? A diff or repository may not be available for a supplied snippet.
+- **Existing-code review:** What files, components, tests, and relevant configuration are in the requested scope, and which existing behaviors must be checked? Inventory the entire project only when that is the requested scope.
 
 ### Step 2: Review the Tests First
 
@@ -92,15 +92,15 @@ Label every finding with its severity so the author knows what must change:
 
 | Prefix | Meaning | Effect on the verdict |
 |--------|---------|-----------------------|
-| **Critical:** | Security vulnerability, data loss, or broken required behavior | Blocks approval |
-| **Required:** | A change that must be made before merge | Blocks approval |
+| **Critical:** | Security vulnerability, data loss, or broken required behavior | Blocks readiness when assessed |
+| **Required:** | A consequential issue that must be addressed | Blocks readiness when assessed |
 | **Consider:** | A worthwhile suggestion | Does not block |
 | **Nit:** | Minor style or formatting point the author may ignore | Does not block |
 | **FYI:** | Context only; no action needed | Does not block |
 
-The verdict for a change review follows from the labels: **Request changes** when any Critical or Required finding remains; otherwise **Approve**.
+When merge or ship readiness is requested for a change, the recommendation follows from the labels: **Request changes** when any Critical or Required finding remains; otherwise **Approve**. For other reviews, conclude neutrally with whether action is needed, without implying a merge decision.
 
-**Lead with what matters.** Order findings by impact: correctness and security first, then structural regressions and missed simplifications, then the rest. A few high-conviction findings beat a long list of nits. Anchor every finding to the exact current file path and the smallest relevant line or range (a changed line for a pull request), and cite every affected location when one root cause spans files. Explain the failure or the unnecessary complexity, and give an actionable remedy. Verify line numbers from the file or diff; if a location is unavailable, say so. Don't invent impact figures or present unverified risks as facts.
+**Lead with what matters.** Order findings by impact: correctness and security first, then structural regressions and missed simplifications, then the rest. A few high-conviction findings beat a long list of nits. Anchor every finding to the exact current file path and smallest relevant line or range, and cite every affected location when one root cause spans files. If posting an inline comment was requested, check that its location is eligible on that host. Explain the failure or the unnecessary complexity, and give an actionable remedy. Verify line numbers from the file or supplied material; if a location is unavailable, say so. Don't invent impact figures or present unverified risks as facts.
 
 ### Step 5: Verify the Verification
 
@@ -110,11 +110,15 @@ Check the evidence supplied with the change or available in the project: which t
 
 ### Change reviews
 
-Start with an inventory of every changed file and hunk against the intended base. Record added and removed lines, the change's purpose, and relevant tests or callers. A one-line edit may take one pass; above about 1,000 changed lines, plan bounded batches organized by related files or behavior. Size is never a reason to skip, sample, or reject a review; if a change also grows a file past about 1,000 lines, check whether it should extract a module. Do not substitute a diff summary, a sample, or a size-based rejection for reading the change.
+When a full diff is available, inventory every changed file and hunk against the intended base. Record added and removed lines, the change's purpose, and relevant tests or callers. A small edit may take one pass; for a large change, plan bounded batches organized by related files or behavior. Size is never a reason to skip, sample, or reject a review. Consider extraction only when it improves the design, not just because a file is long. Do not substitute a diff summary or sample for reviewing the requested material.
 
 ### Whole-project audits
 
 Inventory in-scope source, tests, configuration, manifests, and behavior-defining docs; inspect every in-scope file in subsystem batches; and report coverage by category with exclusions and reasons. Read [references/project-audit.md](references/project-audit.md) for the full procedure.
+
+### Other existing-code reviews
+
+Inventory and examine the requested files or subsystem and the relevant context available. Do not assume the user wants a whole-repository audit or a change review.
 
 ### Both modes
 
@@ -124,7 +128,7 @@ For each batch:
 2. Record which files and hunks were examined, what was verified, and candidate findings with precise file paths, line numbers or ranges, and concrete remedies. Keep a compact coverage ledger outside the final report if the review exceeds the current context; use it to resume rather than rereading or silently dropping batches.
 3. Reconcile the ledger with the initial inventory and examine cross-batch interactions before writing the verdict. Combine duplicate symptoms under their shared root cause, but retain distinct actionable findings and cite each affected path.
 
-Deliver one consolidated review after processing the full scope, not a stream of partial comments. Put all findings and their recommendations together in priority order before the checklist. For each finding, identify severity, affected lines, consequence, and the smallest sound fix. Give a concise coverage account (in-scope files reviewed versus inventoried, changed lines for PRs, exclusions, unreviewed areas, and verification not run). If any in-scope area remains unexamined, still report confirmed partial findings and uncovered areas, but mark the verdict **Incomplete review/audit**; never imply full coverage or approve on partial evidence. A completed repository audit reports whether action is needed; it does not approve an entire project for merge.
+Deliver one consolidated review after processing the full scope, not a stream of partial comments. Put all findings and their recommendations together in priority order before the checklist. For each finding, identify severity, affected lines, consequence, and the smallest sound fix. Give a concise coverage account appropriate to the target: inspected and inventoried files, changed lines when applicable, exclusions, unreviewed areas, and verification not run. If any in-scope area remains unexamined, still report confirmed partial findings and uncovered areas, but mark the review **Incomplete review/audit**; never imply full coverage or approve on partial evidence. A completed repository audit reports whether action is needed; it does not approve an entire project for merge.
 
 ## Dead Code Hygiene
 
@@ -145,7 +149,7 @@ After a refactor or implementation change, check for newly orphaned code; in a w
 - **Described tests are not run tests.** Tests described in a prompt or pull request are evidence of intent, not of a pass. Never claim a test or build passed unless you ran it or saw its output.
 - **Check data against its source of truth mechanically.** When a change carries large tables or generated data, compare every entry against the authoritative source with a script or tool, including the first and last entries. A sample is not verification.
 - **Silent defaults hide rejections.** A `?? 0`, `?? 'default'`, or fallthrough `return 0` where the spec requires rejection is a correctness finding, not a style point.
-- **Supplied material is the scope.** When the user gives only an excerpt, snippet, or diff, review what was supplied; list unseen context such as callers or the full test suite under Verification not run. Still decide **Approve** or **Request changes** from the labels. Reserve **Incomplete review/audit** for material in scope that you could not inspect, and never use it to soften a Critical or Required finding.
+- **Supplied material is the scope.** When the user gives only an excerpt, snippet, or diff, review what was supplied; list unseen context such as callers or the full test suite under Verification not run. Give an approval-style recommendation only when readiness is requested. Mark a review **Incomplete review/audit** when material in the agreed scope could not be inspected, and never use that label to soften a Critical or Required finding.
 - **Audits do not approve.** A whole-project audit ends with **Audit complete** (stating whether action is needed) or **Incomplete review/audit**, never with **Approve** or **Request changes**.
 
 ## The Review Checklist
@@ -153,7 +157,7 @@ After a refactor or implementation change, check for newly orphaned code; in a w
 Use this format for the single consolidated review or audit. Check only what the evidence supports; mark inapplicable items N/A, and identify relevant checks that could not be verified. Findings go first so the author can act without scanning every checklist item. If there are none, write "No findings." Group related findings by root cause, not by the batch in which they were discovered.
 
 ```markdown
-## Review: [PR, change, or project]
+## Review: [requested target]
 
 ### Findings
 1. **Required:** `path/to/file.ext:42-45`: What fails or is unnecessary, why it matters, and the concrete fix. Cite additional precise locations for a cross-file cause.
@@ -161,7 +165,7 @@ Use this format for the single consolidated review or audit. Check only what the
 ### Coverage
 - Scope and conventions checked: [change or project, and applicable guidance]
 - In-scope files inspected: [number] / [number], by source, tests, and configuration where applicable
-- Changed lines accounted for: [number] / [number] for change reviews; N/A for project audits
+- Changed lines accounted for: [number] / [number] when a full diff is in scope; N/A otherwise
 - Excluded areas and reasons: [paths, or none]
 - Unreviewed areas: [paths and hunks, or none]
 - Verification not run: [relevant checks, or none]
@@ -209,8 +213,9 @@ Use this format for the single consolidated review or audit. Check only what the
 - [ ] Manual verification done (if applicable)
 
 ### Verdict
-- [ ] **Approve** — Change review only; no Critical or Required findings remain
-- [ ] **Request changes** — Change review only; Critical or Required findings must be addressed
+- [ ] **Review complete** — State whether findings require action; use for reviews without a readiness request
+- [ ] **Approve** — Change readiness requested; no Critical or Required findings remain
+- [ ] **Request changes** — Change readiness requested; Critical or Required findings must be addressed
 - [ ] **Audit complete** — Project audit only; state whether findings require action
 - [ ] **Incomplete review/audit** — Partial findings reported; in-scope areas remain unexamined
 ```

@@ -1,13 +1,13 @@
 # Change Hygiene
 
-Read this when a pull request is very large or mixes unrelated work, when its
+Read this when a change is very large or mixes unrelated work, when its
 description needs review, or when the author disputes a finding.
 
 ## Change sizing
 
-Size prompts a cohesion check; it is never a reason to skip a review or to demand a split. Around 100 changed lines usually fits one pass; around 300, check that it is one logical change; above about 1,000, plan review batches. A 15,000-line diff still gets a complete review.
+Size prompts a cohesion check; it is never a reason to skip a review or to demand a split. Review small changes in one pass when practical. For large changes, use bounded batches and reconcile them into one review. There is no upper size cutoff.
 
-**Watch file size, not just diff size.** A small diff can push a file past a healthy boundary. Around 1,000 total lines in one file is an inspection signal, not a hard limit. When a change materially grows an already-large file, ask whether to extract helpers or modules first.
+**Consider the whole file, not just the diff.** When a change materially grows a file, consider extraction only if it improves ownership or clarity; length alone does not require a split.
 
 ## Splitting a large change
 

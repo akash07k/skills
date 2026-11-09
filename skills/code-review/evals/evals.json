@@ -37,11 +37,11 @@
     {
       "id": 4,
       "prompt": "Review this small TypeScript change without editing it. The requirement is to show `No tags` for an empty tag list; otherwise join tags with a comma and space. The new src/tags/summary.ts contains:\n1 export function tagSummary(tags: string[]): string {\n2   if (tags.length === 0) return 'No tags';\n3   return tags.join(', ');\n4 }\nThe project has no existing tag-formatting helper. Tests cover an empty list, one tag, and multiple tags. Provide the full review checklist and verdict. Do not ask to extract a helper or add a dependency solely because it could be reused in the future.",
-      "expected_output": "Approve a simple, correct change without inventing complexity, readability, or architecture problems; distinguish described tests from tests actually run.",
+      "expected_output": "Give a neutral conclusion for a simple, correct change without inventing complexity, readability, or architecture problems; distinguish described tests from tests actually run.",
       "files": [],
       "assertions": [
         "The review includes checklist sections for all six axes, verification, and a verdict.",
-        "The verdict approves the correct simple change without requiring a speculative abstraction, helper extraction, or dependency.",
+        "The review concludes that the simple change has no required findings without giving an approval-style verdict or requiring a speculative abstraction, helper extraction, or dependency.",
         "The review distinguishes tests described in the prompt from tests actually executed by the reviewer.",
         "The small change receives a concise coverage account limited to the supplied file and lines rather than a fabricated claim of repository-wide coverage."
       ]
