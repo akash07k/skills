@@ -17,7 +17,8 @@ and review steps. An initial baseline is a separate authoring phase.
 
 ## Prerequisites and workspace layout
 
-Use Python 3.13 or later. In the commands below, `scripts/` is this skill's
+Use Python 3.13 or later and install this skill's `requirements.txt` before
+running the commands with Python. In the commands below, `scripts/` is this skill's
 scripts folder. Use its full path; the scripts work from any directory.
 On Windows, check `python --version`. If `python` is only a WindowsApps alias, run
 `py --list-paths` to find an installed interpreter, then call it with

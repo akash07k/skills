@@ -275,11 +275,16 @@ queries. Treat result directories as sensitive project data.
      The optimized description text.
    ```
 
-2. Validate the skill:
+2. Validate the skill with both required checks:
 
    ```powershell
-   python scripts/quick_validate.py "<path-to-skill>"
+   uv run "<absolute-path-to-quick_validate.py>" "<path-to-skill>" --target portable
+   uvx --refresh-package agnix agnix@latest --strict --format json "<absolute-path-to-SKILL.md>"
    ```
+
+   Follow the validation instructions in `SKILL.md` and
+   `references/writing-skills.md`, including the client target, agnix file
+   count, version, diagnostics, and incomplete-validation handling.
 
 3. Check the description with new queries. Write 5 to 10 queries that were
    not used during optimization, including near-misses. Run them once against

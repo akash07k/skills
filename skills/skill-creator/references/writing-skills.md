@@ -2,7 +2,8 @@
 
 Read this before you write a new SKILL.md or make a large change to one. It
 covers the frontmatter fields, the description, staged loading, writing style
-and validation.
+and validation. For the official sources, read
+[official-sources.md](official-sources.md).
 
 ## Layout and frontmatter
 
@@ -22,7 +23,7 @@ The frontmatter supports these fields from the Agent Skills specification:
 
 | Field | Required | Rules |
 | --- | --- | --- |
-| `name` | Yes | 1-64 characters. Lowercase letters, digits and hyphens. No hyphen at the start or end, and no `--`. Must be the same as the directory name. |
+| `name` | Yes | 1-64 characters. Lowercase letters, digits and hyphens. No hyphen at the start or end, and no `--`. Must be the same as the directory name. The specification permits Unicode; this workflow requires ASCII for agnix compatibility. |
 | `description` | Yes | 1-1024 characters. Say what the skill does and when to use it. |
 | `license` | No | A license name or the name of a bundled license file. |
 | `compatibility` | No | 1-500 characters. Required tools, runtimes, network access or target client. Add it only when the skill has such requirements. |
@@ -30,14 +31,16 @@ The frontmatter supports these fields from the Agent Skills specification:
 | `allowed-tools` | No | Space-separated tools that the skill may use without asking. Experimental; support differs between clients. |
 
 Use a YAML block scalar (`description: |`) when the text contains `:`, `#`
-or quotes. In plain YAML, `yes`, `no`, `on`, `off` and numbers are not strings,
-so quote them.
+or quotes. The local validator uses the YAML 1.2 core schema. Some clients
+use YAML 1.1 and interpret `yes`, `no`, `on`, `off` or dates differently;
+quote these values for portability. Quote numbers when a string is required.
 
-Some clients add their own fields, such as `argument-hint`, `user-invocable`
-and `disable-model-invocation` in VS Code. They are not in the specification.
-`quick_validate` reports them as warnings, and as errors with `--strict`.
-Other unknown fields are always errors. Add a client field only when the user
-targets that client.
+Some clients add fields outside the portable specification. Add them only when
+the user targets that client. Pass `--target copilot`, `--target claude-code`,
+or `--target codex` to the local validator. Without an explicit target, the
+local validator reports common extensions as warnings, or errors with
+`--strict`; unknown fields are errors. Codex uses an optional
+`agents/openai.yaml` sidecar instead of extra `SKILL.md` fields.
 
 **The description is the trigger.** Compatible agents use the skill name and
 description to decide whether to load its instructions, though exact selection
@@ -183,12 +186,25 @@ system security. What a skill does must not surprise a user who reads its
 description. Do not create misleading skills, or skills for unauthorized
 access or data exfiltration. Role-play skills are acceptable.
 
-After you write or change a skill, validate it:
+After you write or change a skill, run both required validators as described
+in `SKILL.md`:
 
 ```powershell
-python scripts/quick_validate.py "<path-to-skill>"
+uv run "<absolute-path-to-quick_validate.py>" "<path-to-skill>" --target portable
+uvx --refresh-package agnix agnix@latest --strict --format json "<absolute-path-to-SKILL.md>"
 ```
 
-The validator reports all errors and warnings. Exit code 0 means the skill is
-valid. Fix warnings too, unless they are about a client field that the user
-wants. Read the draft again later with fresh eyes and improve it.
+Resolve the local validator relative to this skill and `SKILL.md` relative to
+the target skill. For a selected client, replace `portable` with its `--target`
+in the local validator. For Claude Code or Codex, also add the same `--target` to agnix.
+For Copilot, use agnix's generic target. If a Codex skill contains
+`agents/openai.yaml`, pass it as a second path to agnix and require at least
+two files checked. Agnix recognizes this sidecar in a native
+`.agents/skills/<name>` location. If it does not check the sidecar, report
+validation as incomplete.
+
+Confirm that agnix examined the expected files and reports no errors or
+warnings. Record its version. If either required check cannot run, report full
+validation as incomplete. These checks do not prove that the target client
+loads or follows the skill. Run a real client test only when the user chooses
+one and the client is available.

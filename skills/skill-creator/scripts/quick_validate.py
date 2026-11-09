@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 # /// script
 # requires-python = ">=3.13"
-# dependencies = []
+# dependencies = ["ruamel.yaml==0.19.0"]
 # ///
-"""Dependency-free validation of a skill folder against the Agent Skills spec.
+"""Validate a skill folder against the Agent Skills spec.
 
 Usage:
-    python scripts/quick_validate.py <skill-directory> [--strict] [--json]
+    uv run scripts/quick_validate.py <skill-directory> [--strict] [--json] [--target CLIENT]
 
 Errors and warnings go to stderr; a success line goes to stdout. With --json a
 single JSON object {"path", "valid", "errors", "warnings"} is the only output.
@@ -31,10 +31,19 @@ if not __package__:
     # Allow `python <skill>/scripts/<name>.py` from any working directory.
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from scripts.utils import FrontmatterError, ensure_utf8_stdio, load_frontmatter, resolve_plain_scalar
+from scripts.utils import FrontmatterError, ensure_utf8_stdio, load_frontmatter
 
 ALLOWED_PROPERTIES = {"name", "description", "license", "allowed-tools", "metadata", "compatibility"}
 CLIENT_SPECIFIC_PROPERTIES = {"argument-hint", "user-invocable", "disable-model-invocation"}
+CLIENT_PROPERTIES = {
+    "portable": set(),
+    "copilot": CLIENT_SPECIFIC_PROPERTIES,
+    "codex": set(),
+    "claude-code": CLIENT_SPECIFIC_PROPERTIES | {
+        "when_to_use", "arguments", "disallowed-tools", "model", "effort",
+        "context", "agent", "background", "hooks", "paths", "shell",
+    },
+}
 MAX_NAME_LENGTH = 64
 MAX_DESCRIPTION_LENGTH = 1024
 MAX_COMPATIBILITY_LENGTH = 500
@@ -172,19 +181,27 @@ def _check_reference(target: str, skill_path: Path, label: str, warnings: list[s
         warnings.append(f"{label} {target!r} does not exist")
 
 
-def _check_body_references(body: str, skill_path: Path, warnings: list[str]) -> None:
+def body_reference_targets(body: str) -> list[tuple[str, str]]:
+    """Return explicit Markdown and inline-code references from the body."""
     text, spans = _body_without_code(body)
     seen: set[str] = set()
     targets = [(m.group(1), "Link") for m in _LINK_RE.finditer(text)]
     targets += [(m.group(1), "Link") for m in _LINK_DEFINITION_RE.finditer(text)]
     targets += [(span, "File reference") for span in spans if _SKILL_DIR_PATH_RE.fullmatch(span)]
+    result = []
     for target, label in targets:
         target = target.strip()
         if target.startswith("<") and target.endswith(">"):
             target = target[1:-1].strip()
         if target and target not in seen:
             seen.add(target)
-            _check_reference(target, skill_path, label, warnings)
+            result.append((target, label))
+    return result
+
+
+def _check_body_references(body: str, skill_path: Path, warnings: list[str]) -> None:
+    for target, label in body_reference_targets(body):
+        _check_reference(target, skill_path, label, warnings)
 
 
 def _find_skill_md(skill_path: Path, errors: list[str]) -> Path | None:
@@ -203,10 +220,11 @@ def _find_skill_md(skill_path: Path, errors: list[str]) -> Path | None:
     return None
 
 
-def check_skill(skill_path, strict: bool = False) -> ValidationResult:
+def check_skill(skill_path, strict: bool = False, target: str | None = None) -> ValidationResult:
     """Validate a skill directory and collect every error and warning.
 
-    With ``strict``, client-specific frontmatter fields are errors instead of warnings.
+    With ``strict``, client-specific fields are errors unless an explicit
+    target supports them.
     """
     result = ValidationResult()
     errors, warnings = result.errors, result.warnings
@@ -239,14 +257,18 @@ def check_skill(skill_path, strict: bool = False) -> ValidationResult:
         return result
     data = frontmatter.data
 
-    unexpected = set(data) - ALLOWED_PROPERTIES - CLIENT_SPECIFIC_PROPERTIES
+    if target is not None and target not in CLIENT_PROPERTIES:
+        errors.append(f"Unknown client target: {target}")
+        return result
+    extensions = CLIENT_SPECIFIC_PROPERTIES if target is None else CLIENT_PROPERTIES[target]
+    unexpected = set(data) - ALLOWED_PROPERTIES - extensions
     if unexpected:
         errors.append(
             f"Unexpected key(s) in SKILL.md frontmatter: {', '.join(sorted(unexpected))}. "
-            f"Allowed properties are: {', '.join(sorted(ALLOWED_PROPERTIES))}"
+            f"Allowed properties are: {', '.join(sorted(ALLOWED_PROPERTIES | extensions))}"
         )
-    client_specific = sorted(set(data) & CLIENT_SPECIFIC_PROPERTIES)
-    if client_specific:
+    client_specific = sorted(set(data) & extensions)
+    if target is None and client_specific:
         (errors if strict else warnings).append(
             f"Client-specific key(s) in SKILL.md frontmatter: {', '.join(client_specific)}. "
             "These are extensions of some clients (e.g. VS Code), not part of the Agent Skills "
@@ -297,10 +319,29 @@ def check_skill(skill_path, strict: bool = False) -> ValidationResult:
             )
 
     for key in ("license", "allowed-tools"):
-        if key in data and not isinstance(data[key], str):
+        value = data.get(key)
+        claude_tools = (
+            key == "allowed-tools" and target == "claude-code"
+            and isinstance(value, list) and all(isinstance(item, str) for item in value)
+        )
+        if key in data and not isinstance(value, str) and not claude_tools:
             errors.append(_not_a_string(frontmatter, key, f"'{key}'", data[key]))
     if isinstance(data.get("license"), str) and not data["license"].strip():
         warnings.append("license is empty; remove it or name a license")
+
+    if target in ("copilot", "claude-code"):
+        for key in ("user-invocable", "disable-model-invocation"):
+            if key in data and not isinstance(data[key], bool):
+                errors.append(f"'{key}' must be a boolean")
+        if "argument-hint" in data and not isinstance(data["argument-hint"], str):
+            errors.append("'argument-hint' must be a string")
+    if target == "claude-code":
+        if "context" in data and data["context"] != "fork":
+            errors.append("'context' must be 'fork' for Claude Code")
+        if "background" in data and not isinstance(data["background"], bool):
+            errors.append("'background' must be a boolean for Claude Code")
+        if "hooks" in data and not isinstance(data["hooks"], dict):
+            errors.append("'hooks' must be a mapping for Claude Code")
 
     if "metadata" in data:
         metadata = data["metadata"]
@@ -311,12 +352,12 @@ def check_skill(skill_path, strict: bool = False) -> ValidationResult:
         else:
             for key, value in metadata.items():
                 info = frontmatter.info.get(f"metadata.{key}", {})
-                resolved = resolve_plain_scalar(key) if info.get("key_style", "plain") == "plain" else key
-                if not isinstance(resolved, str):
+                if not isinstance(key, str):
                     line = f"line {info['line']}: " if "line" in info else ""
+                    raw = info.get("key_raw", str(key))
                     errors.append(
                         f"{line}metadata keys must be strings; quote the key: the unquoted key "
-                        f"{key!r} is a YAML {_yaml_type(resolved)}, write \"{key}\": ... instead"
+                        f"{raw!r} is a YAML {_yaml_type(key)}, write \"{raw}\": ... instead"
                     )
                 if not isinstance(value, str):
                     errors.append(
@@ -366,9 +407,13 @@ def main(argv=None) -> int:
         "--json", action="store_true",
         help='print one JSON object {"path", "valid", "errors", "warnings"} to stdout and nothing else',
     )
+    parser.add_argument(
+        "--target", choices=sorted(CLIENT_PROPERTIES),
+        help="validate fields for an explicitly selected client; default is portable with legacy warnings",
+    )
     args = parser.parse_args(argv)
 
-    result = check_skill(args.skill_directory, strict=args.strict)
+    result = check_skill(args.skill_directory, strict=args.strict, target=args.target)
     if args.json:
         skill_dir = Path(args.skill_directory)
         if skill_dir.name.lower() == "skill.md" and skill_dir.is_file():

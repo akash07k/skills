@@ -9,7 +9,7 @@ import sys
 import tempfile
 import unittest
 import zipfile
-from datetime import date, datetime
+from datetime import datetime
 from pathlib import Path
 from unittest import mock
 
@@ -116,18 +116,18 @@ class ScalarStyleTests(unittest.TestCase):
             "a: yes\nb: No\nc: on\nd: OFF\ne: y\nf: true\ng: null\nh: ~\n"
             "i: 42\nj: 1.5\nk: 0x1F\nl: 2024-01-02\nm: .inf\nn: yesterday\no: 1.2.3"
         )
-        self.assertIs(data["a"], True)
-        self.assertIs(data["b"], False)
-        self.assertIs(data["c"], True)
-        self.assertIs(data["d"], False)
-        self.assertIs(data["e"], True)
+        self.assertEqual(data["a"], "yes")
+        self.assertEqual(data["b"], "No")
+        self.assertEqual(data["c"], "on")
+        self.assertEqual(data["d"], "OFF")
+        self.assertEqual(data["e"], "y")
         self.assertIs(data["f"], True)
         self.assertIsNone(data["g"])
         self.assertIsNone(data["h"])
         self.assertEqual(data["i"], 42)
         self.assertEqual(data["j"], 1.5)
         self.assertEqual(data["k"], 31)
-        self.assertEqual(data["l"], date(2024, 1, 2))
+        self.assertEqual(data["l"], "2024-01-02")
         self.assertEqual(data["m"], float("inf"))
         self.assertEqual(data["n"], "yesterday")
         self.assertEqual(data["o"], "1.2.3")
@@ -148,29 +148,21 @@ class RejectedConstructTests(unittest.TestCase):
 
     def test_rejections_have_clear_line_numbered_messages(self):
         cases = (
-            ("name: x\ntools: [a, b]", "flow collections", 3),
-            ("a: {k: v}", "flow collections", 2),
-            ("a: &anchor x", "anchors", 2),
-            ("a: *alias", "aliases", 2),
-            ("a: !tag x", "tags", 2),
-            ("a: x\nb:\n  nested: map", "nested mappings", 4),
-            ("metadata:\n  a:\n    b: c", "nested mappings", 4),
+            ("a: *alias", "undefined alias", 2),
+            ("a: !tag x", "constructor", 2),
             ("a: x\na: y", "Duplicate frontmatter property: a", 3),
-            ("metadata:\n  k: 1\n  k: 2", "Duplicate key in 'metadata': k", 4),
-            ("\ta: x", "tabs", 2),
-            ("metadata:\n\tk: v", "tabs", 3),
-            ("b:\n  - item", "sequences", 3),
-            ("- item", "sequences", 2),
+            ("metadata:\n  k: 1\n  k: 2", "Duplicate frontmatter property: k", 4),
+            ("\ta: x", "cannot start any token", 2),
+            ("metadata:\n\tk: v", "cannot start any token", 3),
+            ("- item", "frontmatter must be a YAML mapping", 2),
             ("a: b: c", "quote the value", 2),
-            ('a: "x" y', "unexpected text after closing quote", 2),
-            ("a: 'open", "unterminated", 2),
+            ('a: "x" y', "expected <block end>", 2),
+            ("a: 'open", "unexpected end", 3),
             ("a: x\n  extra: y", "quote the value", 3),
             ("name:value", "separated from keys by a space", 2),
-            ('"quoted": key', "quoted keys", 2),
-            ("a: |x\n  y", "invalid block scalar header", 2),
-            ('a: "\\q"', "unsupported escape", 2),
-            ("a: @x", "cannot start with '@'", 2),
-            ("  a: x", "unexpected indentation", 2),
+            ("a: |x\n  y", "indentation indicators", 2),
+            ('a: "\\q"', "unknown escape", 2),
+            ("a: @x", "cannot start any token", 2),
         )
         for text, fragment, line in cases:
             with self.subTest(text=text):
@@ -195,7 +187,8 @@ class CompatibilityHelperTests(unittest.TestCase):
         self.assertEqual(decode_yaml_scalar('"a\\tb"'), "a\tb")
         self.assertEqual(decode_yaml_scalar("plain"), "plain")
         self.assertTrue(is_safe_yaml_plain_scalar("Use when asked."))
-        for unsafe in ("yes", "123", "a: b", "a #b", "[x]", " x", "", "*x"):
+        self.assertTrue(is_safe_yaml_plain_scalar("yes"))
+        for unsafe in ("true", "123", "a: b", "a #b", "[x]", " x", "", "*x"):
             with self.subTest(unsafe=unsafe):
                 self.assertFalse(is_safe_yaml_plain_scalar(unsafe))
 
@@ -263,13 +256,15 @@ class ValidationRuleTests(unittest.TestCase):
         self.assert_error("d", base + "''", "must not be empty")
 
     def test_boolean_like_and_numeric_plain_values_are_rejected(self):
-        for value, kind in (("yes", "boolean"), ("off", "boolean"), ("null", "null"), ("42", "integer"), ("1.0", "number")):
+        for value, kind in (("true", "boolean"), ("false", "boolean"), ("null", "null"), ("42", "integer"), ("1.0", "number")):
             with self.subTest(value=value):
                 self.assert_error("d", f"name: d\ndescription: {value}", f"YAML {kind}; quote it")
         self.assert_error("d", "name: d\ndescription: Use when x.\nmetadata:\n  version: 1.0", "'metadata.version'")
         self.assert_error("d", "name: d\ndescription: Use when x.\nlicense: true", "'license'")
         self.assert_error("d", "name: d\ndescription: Use when x.\nmetadata: plain", "'metadata' must be a mapping")
         self.assertTrue(self.check("d", "name: d\ndescription: \"yes, use when x\"").valid)
+        for value in ("yes", "on", "off", "2024-01-02"):
+            self.assertTrue(self.check("d", f"name: d\ndescription: {value}").valid)
 
     def test_unknown_keys_and_all_errors_reported(self):
         result = self.check("good-name", "name: Bad--Name\ndescription: ''\nfoo: bar\ncompatibility: ''")
@@ -314,8 +309,8 @@ class ValidationRuleTests(unittest.TestCase):
         self.assert_warning(self.check("d", frontmatter, body="x" * 20004), "about 5001 tokens")
 
     def test_metadata_keys_must_resolve_to_strings(self):
-        for key, kind in (("1", "integer"), ("1.5", "number"), ("yes", "boolean"), ("Off", "boolean"),
-                          ("null", "null"), ("2024-01-02", "timestamp")):
+        for key, kind in (("1", "integer"), ("1.5", "number"), ("true", "boolean"), ("false", "boolean"),
+                          ("null", "null")):
             with self.subTest(key=key):
                 result = self.check("d", f"name: d\ndescription: Use when x.\nmetadata:\n  {key}: v")
                 self.assertFalse(result.valid)
@@ -325,6 +320,7 @@ class ValidationRuleTests(unittest.TestCase):
             "d", "name: d\ndescription: Use when x.\nmetadata:\n  \"1\": v\n  'yes': w\n  \"a\\tb\": x\n  ok-key: yv"
         )
         self.assertEqual(result.errors, [])
+        self.assertTrue(self.check("d", "name: d\ndescription: Use when x.\nmetadata:\n  yes: v\n  2024-01-02: v").valid)
         self.assert_error("d", "name: d\ndescription: Use when x.\nmetadata: {1: v}", "metadata keys must be strings")
 
     def test_metadata_flow_map(self):
@@ -343,27 +339,25 @@ class ValidationRuleTests(unittest.TestCase):
         self.assert_error("d", base + "{version: 1.0}", "'metadata.version'")
         self.assert_error("d", base + "{a}", "'metadata.a'")
 
-    def test_flow_map_limitations_are_explained(self):
+    def test_invalid_flow_maps_are_rejected(self):
         cases = (
-            ("metadata: {a: {b: c}}", "nested flow collections"),
-            ("metadata: {a: [b, c]}", "nested flow collections"),
-            ("metadata: {a: b", "not closed"),
-            ("metadata: {a: b, a: c}", "Duplicate key in 'metadata': a"),
-            ("metadata: {a: b} extra", "unexpected text after flow map"),
+            ("metadata: {a: b", "stream end"),
+            ("metadata: {a: b, a: c}", "Duplicate frontmatter property: a"),
+            ("metadata: {a: b} extra", "expected <block end>"),
             ("metadata: {a b: c d e: f}", "expected ','"),
-            ("metadata: {a: b # c}", "comments are not allowed"),
+            ("metadata: {a: b # c}", "stream end"),
         )
         for text, fragment in cases:
             with self.subTest(text=text):
                 with self.assertRaises(FrontmatterError) as caught:
                     fm(text)
                 self.assertIn(fragment, str(caught.exception))
-        for text in ("metadata: {a: {b: c}}", "license: {a: b}", "metadata:\n  a: {b: c}"):
+        base = "name: d\ndescription: Use when x.\n"
+        for text in ("metadata: {a: {b: c}}", "metadata: {a: [b, c]}", "metadata:\n  a: {b: c}"):
             with self.subTest(text=text):
-                with self.assertRaises(FrontmatterError) as caught:
-                    fm(text)
-                self.assertIn("validator's YAML subset", str(caught.exception))
-                self.assertIn("metadata", str(caught.exception))
+                result = self.check("d", base + text)
+                self.assertFalse(result.valid)
+                self.assertIn("metadata.a", "\n".join(result.errors))
 
     def test_client_specific_fields_warn_or_fail_in_strict_mode(self):
         frontmatter = (
@@ -465,7 +459,7 @@ class CliTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             good = make_skill(root, "good", "name: good\ndescription: Use when testing.")
-            bad = make_skill(root, "bad", "name: Bad\ndescription: yes\nextra: 1")
+            bad = make_skill(root, "bad", "name: Bad\ndescription: true\nextra: 1")
             ok = run_cli("quick_validate", str(good))
             self.assertEqual(ok.returncode, 0, ok.stderr)
             self.assertIn("Skill is valid!", ok.stdout)
@@ -539,6 +533,20 @@ class CliTests(unittest.TestCase):
 
 
 class PackagingTests(unittest.TestCase):
+    def setUp(self):
+        response = subprocess.CompletedProcess(
+            args=[], returncode=0,
+            stdout=json.dumps({
+                "version": "test-version",
+                "files_checked": 1,
+                "summary": {"errors": 0, "warnings": 0, "info": 0},
+            }),
+            stderr="",
+        )
+        patcher = mock.patch.object(packager.subprocess, "run", return_value=response)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
     def test_missing_collected_entry_point_preserves_existing_archive(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
@@ -601,7 +609,7 @@ class PackagingTests(unittest.TestCase):
     def test_refuses_invalid_skill(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
-            skill = make_skill(root, "demo", "name: demo\ndescription: yes")
+            skill = make_skill(root, "demo", "name: demo\ndescription: true")
             stderr = io.StringIO()
             with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(stderr):
                 self.assertIsNone(packager.package_skill(skill, root / "out"))

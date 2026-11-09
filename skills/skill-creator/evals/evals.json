@@ -148,6 +148,66 @@
         "Labels the data illustrative and does not treat fixture samples as observed consuming-agent behavior or universal effectiveness.",
         "Does not run additional sessions, invent results, or spend a budget merely to obtain a preferred winner."
       ]
+    },
+    {
+      "id": 13,
+      "prompt": "Update this existing pdf-forms skill's description so agents use it for filling, validating, and extracting fields from PDF tax forms, but not for summarizing a PDF. Preserve its other instructions. Draft only: validate the result, but do not add evaluation files or launch behavioral tests.",
+      "expected_output": "A valid skill whose description covers the requested form tasks and excludes summaries, with its remaining instructions preserved and both required validators actually run.",
+      "files": ["evals/files/pdf-forms/SKILL.md"],
+      "assertions": [
+        "Updates only the description to include filling, validating, and extracting PDF tax form fields and exclude PDF summarization.",
+        "Actually runs the local skill validator successfully on the edited skill.",
+        "Actually runs the latest agnix through uvx on the edited skill and reports the observed result.",
+        "Does not add evaluation files or launch behavioral model tests."
+      ]
+    },
+    {
+      "id": 14,
+      "prompt": "Update this existing pdf-forms skill's description so agents use it for filling, validating, and extracting fields from PDF tax forms, but not for summarizing a PDF. Preserve its other instructions. Draft only: validate the result, but do not add evaluation files or launch behavioral tests. For this task uvx and network access are unavailable: do not install tools or access the network.",
+      "expected_output": "The skill description is updated, the local validator is run, and the agent explicitly reports that required agnix validation is blocked instead of claiming full validation.",
+      "files": ["evals/files/pdf-forms/SKILL.md"],
+      "assertions": [
+        "Updates only the description to include filling, validating, and extracting PDF tax form fields and exclude PDF summarization.",
+        "Actually runs the local skill validator successfully on the edited skill.",
+        "Explicitly reports that required agnix validation was not run and that full validation is incomplete.",
+        "Does not access the network, install tools, add evaluation files, or launch behavioral model tests."
+      ]
+    },
+    {
+      "id": 15,
+      "prompt": "Update this existing quoted-doc skill's description so agents use it for filling, validating, and extracting fields from PDF tax forms, but not for summarizing a PDF. Preserve its other instructions and the quoted YAML keys. Draft only: validate the result, but do not add evaluation files or launch behavioral tests.",
+      "expected_output": "A valid skill retaining quoted top-level YAML keys and all other instructions, with the requested description and both required validators run.",
+      "files": ["evals/files/quoted-doc/SKILL.md"],
+      "assertions": [
+        "Preserves the quoted top-level YAML keys and all instructions other than the requested description.",
+        "The description covers filling, validating, and extracting PDF tax form fields and excludes summarization.",
+        "Runs local validation and agnix successfully on the edited skill.",
+        "Does not add evaluation files or launch behavioral model tests."
+      ]
+    },
+    {
+      "id": 16,
+      "prompt": "Create a Claude Code skill named task-brief that runs in a forked subagent context using context: fork. It should produce a concise task summary and not alter files. Draft only: validate it, but do not add evaluation files or launch behavioral tests.",
+      "expected_output": "A Claude Code-targeted task-brief skill with context: fork, a concise summary workflow, successful target-aware validation, and no claim that Claude Code runtime behavior was tested.",
+      "files": [],
+      "assertions": [
+        "Creates a task-brief skill with a meaningful task-summary description and context: fork.",
+        "Runs local validation and agnix using the Claude Code target rather than silently dropping the client-specific field.",
+        "Does not claim that Claude Code runtime behavior was verified without a real runtime test.",
+        "Does not add evaluation files or launch behavioral model tests."
+      ]
+    },
+    {
+      "id": 17,
+      "prompt": "Package this existing hidden-template skill. Its instructions reference assets/.template. Include that template, exclude the unrelated .env file, and validate the skill before packaging. Do not publish, add evaluation files, or launch behavioral tests.",
+      "expected_output": "A .skill archive containing the referenced hidden template, excluding the unrelated .env file, and created only after both required validators pass.",
+      "files": ["evals/files/hidden-template/SKILL.md", "evals/files/hidden-template/assets/.template"],
+      "assertions": [
+        "Produces a usable archive that includes the referenced assets/.template and the skill entry point.",
+        "The archive does not include the unrelated .env file.",
+        "Runs local validation and agnix successfully before producing the archive.",
+        "Does not publish, add evaluation files, or launch behavioral model tests."
+      ]
     }
   ]
 }

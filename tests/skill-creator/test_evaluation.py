@@ -1159,7 +1159,7 @@ class BenchmarkAndPackagingTests(unittest.TestCase):
             )
             self.assertIn("Delta compares With Skill minus Old Skill.", markdown)
 
-    def test_validator_and_packager_need_no_pyyaml_and_preserve_utf8(self):
+    def test_validator_and_packager_preserve_utf8(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             skill = root / "unicode-skill"
@@ -1240,7 +1240,7 @@ class BenchmarkAndPackagingTests(unittest.TestCase):
             )
             valid, error = validate_skill(skill)
             self.assertFalse(valid)
-            self.assertIn("unexpected text after closing quote", error)
+            self.assertIn("expected <block end>", error)
 
     def test_canonical_block_description_preserves_content(self):
         with tempfile.TemporaryDirectory() as temporary:

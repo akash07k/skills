@@ -20,16 +20,39 @@ Remove-Item .agents\skills\skill-creator
 git checkout -- .agents/skills/skill-creator
 ```
 
-Requirements: Python 3.13 or later (standard library only). Each script has a
-PEP 723 header (`requires-python = ">=3.13"`, no dependencies) and stops
-with a clear message on an older Python. Description
-optimization also needs an authenticated GitHub Copilot CLI with network
-access.
+Requirements: Python 3.13 or later and ruamel.yaml 0.19.0 for bundled scripts, plus
+`uvx` and network access for the required agnix validation. Each entry-point
+script declares its Python dependency for `uv run`. Alternatively, install
+`requirements.txt` before running the scripts with Python. Description
+optimization also needs an authenticated GitHub Copilot CLI.
+
+The [Agent Skills specification](https://agentskills.io/specification.md)
+defines the format. The [official sources guide](references/official-sources.md)
+links the authoring, evaluation, and client documentation. This workflow
+requires ASCII skill names for agnix compatibility even though the specification
+permits Unicode names.
+The local validator reads YAML 1.2 core scalars. Quote values such as `yes`,
+`on`, or dates when targeting clients that may use YAML 1.1.
+
+After creating or editing a skill, run both checks from any directory:
+
+```powershell
+uv run "<absolute-path-to-quick_validate.py>" "<path-to-skill>" --target portable
+uvx --refresh-package agnix agnix@latest --strict --format json "<absolute-path-to-SKILL.md>"
+```
+
+Resolve the local validator path under `skill-creator/scripts/` and `SKILL.md`
+under the target skill. Confirm that agnix examined the skill and reports no
+errors or warnings. Record the reported version. If a required check cannot
+run, report full validation as incomplete. The local validator catches format
+issues agnix can miss. For explicitly targeted clients, use the `--target`
+options described in `references/writing-skills.md`. The packager runs both
+checks before writing.
 
 ## Scripts
 
 Run a script by its path, for example
-`python scripts/quick_validate.py <skill-dir>`. The path is relative to this
+`uv run scripts/quick_validate.py <skill-dir>`. The path is relative to this
 directory; use the full path from any other working directory.
 Running a script as a module (`-m scripts.<name>`) from this directory also
 works. Each script supports `--help`, which shows the defaults.

@@ -26,6 +26,35 @@ def read_json(path: Path):
 
 
 class AuthoringFixtureTests(unittest.TestCase):
+    def test_validation_workflow_requires_both_checks(self):
+        body = (SKILL / "SKILL.md").read_text(encoding="utf-8")
+        self.assertIn(
+            'uv run "<absolute-path-to-quick_validate.py>" "<path-to-skill>" --target portable',
+            body,
+        )
+        self.assertIn(
+            'uvx --refresh-package agnix agnix@latest --strict --format json '
+            '"<absolute-path-to-SKILL.md>"',
+            body,
+        )
+        self.assertIn("file count", body)
+        self.assertIn("full validation\nas incomplete", body)
+        self.assertIn("the Agent Skills\n  specification also permits Unicode", body)
+
+    def test_official_documentation_sources_are_linked(self):
+        body = (SKILL / "SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("references/official-sources.md", body)
+        sources = (SKILL / "references" / "official-sources.md").read_text(encoding="utf-8")
+        for path in (
+            "llms.txt", "specification.md", "home.md", "clients.md",
+            "skill-creation/quickstart.md", "skill-creation/best-practices.md",
+            "skill-creation/optimizing-descriptions.md",
+            "skill-creation/evaluating-skills.md", "skill-creation/using-scripts.md",
+            "client-implementation/adding-skills-support.md",
+        ):
+            with self.subTest(path=path):
+                self.assertIn(f"https://agentskills.io/{path}", sources)
+
     def test_task_ids_and_input_paths_are_valid(self):
         suite = read_json(SKILL / "evals" / "evals.json")
         self.assertEqual(suite["skill_name"], "skill-creator")
@@ -87,7 +116,8 @@ class AuthoringFixtureTests(unittest.TestCase):
             path = root / "evals" / "evals.json"
             suite = read_json(path)
             suite["evals"].append({
-                "id": 13, "prompt": "A later task", "expected_output": "A result",
+                "id": max(case["id"] for case in suite["evals"]) + 1,
+                "prompt": "A later task", "expected_output": "A result",
                 "files": [], "assertions": ["The result is correct."],
             })
             path.write_text(json.dumps(suite), encoding="utf-8")

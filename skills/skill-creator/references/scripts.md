@@ -17,7 +17,8 @@ and how to design a script that an agent can use without help.
 **Use a one-off command** when an existing tool already does the work and the
 command has only a few flags. Tools such as `uvx`, `pipx run` and `npx`
 download and run a package without a separate install step. Pin the version,
-so that the command behaves the same next month:
+so that the command behaves the same next month. The required agnix validation
+command in `SKILL.md` deliberately uses the latest version instead:
 
 ```powershell
 uvx ruff@0.8.0 check .

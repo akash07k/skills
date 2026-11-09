@@ -35,13 +35,14 @@ the host cannot support:
   `feedback.json` in the iteration directory. If the user cannot open HTML,
   show the prompts, outputs and grades in the conversation, and record the
   feedback there.
-- **No installed or authenticated Copilot CLI.** Continue to write, validate
-  and review the portable skill by hand. The bundled automated trigger and
-  description-optimization scripts require Copilot CLI; they do not currently
-  accept another provider.
-- **Limited file system or Python access.** Tell the user which scripts cannot
-  run, and deliver the skill text or files that you can. Do not claim that a
-  benchmark, package or viewer step is complete without its output file.
+- **No installed or authenticated Copilot CLI.** The bundled automated
+  trigger and description-optimization scripts cannot run. They do not
+  currently accept another provider. Format validation still requires both
+  the local validator and agnix as described in `SKILL.md`.
+- **Limited file system, Python, uvx, or network access.** Tell the user which
+  required checks cannot run. If either validator cannot run, report full skill
+  validation as incomplete. Do not claim that a benchmark, package, or viewer
+  step is complete without its output file.
 
 Check the actual host's tool list and context inheritance before dispatching.
 A child can inherit the author's conversation even when it has a separate
@@ -110,15 +111,23 @@ validation and packaging scripts accept the symlink path.
 
 ## Package a skill
 
-To give the user a portable archive, run:
+Before packaging, run both required validators as described in `SKILL.md`.
+When both checks pass, give the user a portable archive by running:
 
 ```powershell
-python scripts/package_skill.py "<path-to-skill>" "<output-directory>"
+uv run scripts/package_skill.py "<path-to-skill>" "<output-directory>"
 ```
 
 The output directory is optional. By default, the archive goes into the
-skill's parent folder. The script validates the skill first and does not
-package an invalid skill. It lists each file that it skips, with the reason.
+skill's parent folder. The script runs both the local validator and agnix.
+Pass `--target` for an explicitly selected client. A Codex sidecar is checked
+when the skill uses its native `.agents/skills/<name>` location.
+
+The script includes explicitly referenced hidden files after basic sensitive
+content checks. It rejects known sensitive files or content. If a referenced
+hidden file is ambiguous, ask the user to review it before passing its exact
+path with `--reviewed-hidden`. These checks cannot guarantee that a file has
+no secrets. The script lists excluded files with their reasons.
 The `.skill` archive is a zip file. The archive does not contain:
 
 - development directories: `evals/`, `tests/`, `skill-creator-results/`
@@ -126,7 +135,7 @@ The `.skill` archive is a zip file. The archive does not contain:
   and `*-workspace/`
 - generated files: `__pycache__/`, `node_modules/`, `.venv/`, `*.pyc`, `.log`
   files and existing `.skill` files
-- dotfiles and dot-directories, such as `.env` and `.git/`
+- unreferenced dotfiles and dot-directories, such as `.env` and `.git/`
 
 Linked files and folders are included as their contents. Use trusted local
 skill folders; packaging does not enforce a filesystem sandbox.

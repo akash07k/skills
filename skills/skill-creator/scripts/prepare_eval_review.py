@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # /// script
 # requires-python = ">=3.13"
-# dependencies = []
+# dependencies = ["ruamel.yaml==0.19.0"]
 # ///
 """Build the trigger eval-set editor page from assets/eval_review.html.
 

@@ -3,7 +3,7 @@ name: skill-creator
 description: |
   Use this skill when creating, editing, testing, evaluating, or packaging an Agent Skill (`SKILL.md`) for any compatible agent or harness. Use it to turn workflows into reusable skills, improve instructions or trigger descriptions, add scripts or references, compare a skill against a baseline, or check compatibility with the Agent Skills standard. Trigger even when the user does not say "Agent Skill" but wants to package a repeatable workflow for on-demand use or asks why a skill does not activate. Do not use it for standalone prompt writing, custom instructions such as `AGENTS.md`, custom agents, or MCP servers unless the user wants the result built as a skill. Do not use it to write CI pipelines or GitHub Actions workflows, even ones that run skill evals.
 license: MIT
-compatibility: Requires Python 3.13+ for bundled scripts. Automated trigger evaluation and description optimization currently use the authenticated GitHub Copilot CLI with network access; this is an optional evaluation backend, not a requirement of generated skills.
+compatibility: Requires Python 3.13+, ruamel.yaml, uv (including uvx), and network access for skill validation. Automated trigger evaluation and description optimization optionally use the authenticated GitHub Copilot CLI. These are authoring requirements, not requirements of generated skills.
 ---
 
 # Skill Creator
@@ -22,6 +22,10 @@ Agent Skills format. The main loop is:
 Generated skills follow the Agent Skills format and should be client-neutral by
 default. Add client-specific frontmatter, installation paths, tools or commands
 only when the user targets that client or its compatibility requires them.
+For official sources, read [references/official-sources.md](references/official-sources.md).
+It links the specification, authoring guides, and client guidance with reading
+cues. The specification defines the format; our validation and workflow rules
+are additional choices, not claims about the specification.
 
 Find out where the user is in this loop and continue from there. If they have
 only an idea, help them define it and choose an evidence path. If they already have a
@@ -138,10 +142,12 @@ loading and the writing style guide. The essentials:
 - Use `.agents/skills/<skill-name>/SKILL.md` as the default project location
   for cross-client portability. Use a client's native location only when the
   user targets that client.
-- `name`: 1-64 lowercase letters, digits and hyphens, the same as the
-  directory name. `description`: 1-1024 characters. Add other frontmatter
-  fields only when needed, and client-specific fields only when the user
-  targets that client.
+- `name`: 1-64 lowercase ASCII letters, digits and hyphens, the same as the
+  directory name. This is our compatibility rule for agnix; the Agent Skills
+  specification also permits Unicode. Preserve an existing non-ASCII name
+  unless the user approves renaming it, and report blocked validation.
+  `description`: 1-1024 characters. Add other frontmatter fields only when
+  needed, and client-specific fields only when the user targets that client.
 - **The description is the trigger.** Write it as "Use this skill when…",
   describe what the user wants to achieve, list contexts that do not name the
   domain, and add near-miss exclusions. Then test it with real queries.
@@ -155,12 +161,21 @@ loading and the writing style guide. The essentials:
   discipline failures. See `references/writing-skills.md`.
 - Read `references/scripts.md` before you write or change a bundled script.
 
-After you write or change a skill, validate it and fix every error and
-warning:
+After you write or change a skill, run both validators against that skill:
 
 ```powershell
-python scripts/quick_validate.py "<path-to-skill>"
+uv run "<absolute-path-to-quick_validate.py>" "<path-to-skill>" --target portable
+uvx --refresh-package agnix agnix@latest --strict --format json "<absolute-path-to-SKILL.md>"
 ```
+
+Resolve the first path to this skill's `scripts/quick_validate.py` and the
+second to the target skill's `SKILL.md`. Use the latest agnix. Confirm its exit
+code, file count, errors, and warnings; record its version. The local validator
+catches format issues agnix can miss. For an explicit client target, use the
+target-specific commands in `references/writing-skills.md`. Fix errors and
+warnings and rerun both tools. If either check cannot run, report full validation
+as incomplete. Do not substitute another check. The packager also runs both
+checks before creating an archive.
 
 ## Run and review the evals
 
@@ -209,7 +224,7 @@ For selected evals, repeat the iteration steps below.
 For informal review, revise and validate the draft with the user's feedback
 without claiming an independent comparison.
 
-1. Apply the changes and run `scripts/quick_validate.py`.
+1. Apply the changes and run both validators described above.
 2. Run all test cases again, including the baselines, into
    `iteration-<N+1>/`. For a new skill, the baseline is always without the
    skill. For an existing skill, use either the original version or the
@@ -229,15 +244,11 @@ changes no longer make progress. Blank feedback is not proof of reliability.
 
 ### Robustness and deeper evaluation
 
-For behavior-shaping guidance, recommend repeated wording tests as part of
-the default evaluation plan, not only after an observed failure.
-For discipline skills, also recommend pressure scenarios that require action.
-Use `references/testing-skills.md` for both methods and their scope.
-Explain the proposed sessions and known cost or quota implications before
-asking for approval. A request to edit a skill does not authorize model runs.
-If the user selects a lighter path, report unrun tests and reduced sample counts.
-Offer other checks or fresh confirmation when they address a useful uncertainty.
-Ask before expanding the agreed budget.
+For behavior-shaping guidance, recommend repeated wording tests by default.
+For discipline skills, recommend pressure scenarios that require action.
+Use `references/testing-skills.md` for both methods. Explain sessions and
+known costs before asking for approval. Editing does not authorize model runs.
+Report unrun tests and reduced sample counts. Ask before expanding the budget.
 
 If an experimental draft obstructs a fresh approach, offer to replace or
 rewrite that draft. Agree on the files and whether to retain a copy first.
@@ -258,9 +269,8 @@ If both outputs fail, distinguish a relative winner from an acceptable result.
 ## Optimize the description
 
 If discovery is uncertain or the user wants a measured trigger score, offer
-to optimize the description. Read
-`references/description-optimization.md` for the full procedure. In short:
-write about 20 trigger queries with near-misses, review them with the user,
+description optimization. Read `references/description-optimization.md`.
+Write about 20 trigger queries with near-misses, review them with the user,
 run `scripts/run_loop.py`, apply `best_description`, validate and check the
 result with 5 to 10 new queries.
 
@@ -302,7 +312,7 @@ authorize a commit, push, release, or pull request.
 
 - [ ] Intent, triggers, output format and test approach agreed with the user
 - [ ] Baseline behavior captured before drafting, if behavioral tests selected
-- [ ] SKILL.md written; `quick_validate` passes
+- [ ] SKILL.md written; local validation and agnix pass
 - [ ] Approved test prompts saved and criteria frozen, if tests selected
 - [ ] Candidate and baseline runs compared, with preserved regression cases
 - [ ] Selected grading, benchmark and human review steps complete
@@ -316,11 +326,11 @@ forcing the user through every evaluation option.
 ## Available scripts
 
 The paths are relative to this skill's directory. Each script needs Python
-3.13+ and only the standard library, and supports `--help`.
+3.13+ and ruamel.yaml, declares its dependency for `uv run`, and supports `--help`.
 
 | Script | Purpose |
 | --- | --- |
-| `scripts/quick_validate.py` | Check SKILL.md against the specification. `--json` for machine output, `--strict` to fail on client-specific fields. |
+| `scripts/quick_validate.py` | Check SKILL.md; use `--target` for an explicitly selected client. |
 | `scripts/aggregate_benchmark.py` | Combine graded runs into `benchmark.json` and `benchmark.md`. |
 | `scripts/generate_review.py` | Build the output and benchmark viewer. |
 | `scripts/prepare_eval_review.py` | Build the trigger-query review page. |
@@ -332,6 +342,8 @@ The paths are relative to this skill's directory. Each script needs Python
 
 ## Reference files
 
+- `references/official-sources.md`: official Agent Skills documentation and
+  when to consult each source.
 - `references/writing-skills.md`: frontmatter rules, descriptions, staged
   loading and writing style.
 - `references/testing-skills.md`: baseline-first authoring, tests by skill
